@@ -1,0 +1,1 @@
+This is a repository meant to demonstrate the progress in reverse engineering & decompilation techniques. The AI that was used to decompile minswap had no reference to their opensource contracts, however may have had its training data polluted. On other proprietary test samples, whether a contract set has been opensourced historically, appears to have no affect. 
