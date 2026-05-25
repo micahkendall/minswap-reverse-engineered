@@ -1,0 +1,260 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/core_helpers";
+
+@captures 1;
+fn constr_tag(constructor_data) {
+  fstPair(unConstrData(constructor_data))
+}
+
+@captures 1;
+fn constr_fields(constructor_data) {
+  sndPair(unConstrData(constructor_data))
+}
+
+@captures 1;
+fn constr_first_field(constructor_data) {
+  headList(constr_fields(constructor_data))
+}
+
+@captures 1;
+fn constr_second_field(constructor_data) {
+  headList(tailList(constr_fields(constructor_data)))
+}
+
+@captures 2;
+fn inline_output_datum_data_template(constr_tag_of, constr_fields_of, output_datum) {
+  let output_datum_tag =
+    constr_tag_of(output_datum);
+  assert(2 =i= output_datum_tag);
+  headList(constr_fields_of(output_datum))
+}
+
+@captures 2;
+fn assert_choice_bytes_data_template(constr_tag_of, constr_fields_of, choice_data) {
+  let choice_tag =
+    constr_tag_of(choice_data);
+  !
+    (
+      if (0 =i= choice_tag) {
+        #
+          {
+            let choice_fields =
+              constr_fields_of(choice_data);
+            let choice_bytes =
+              list_first_bytes(choice_fields);
+            !
+              (chooseList(tailList(choice_fields), #(), #error))
+          }
+      } else {
+        #
+          !
+            (
+              if (1 =i= choice_tag) {
+                #
+                  {
+                    let choice_fields =
+                      constr_fields_of(choice_data);
+                    let choice_bytes =
+                      list_first_bytes(choice_fields);
+                    !
+                      (chooseList(tailList(choice_fields), #(), #error))
+                  }
+              } else {
+                #
+                  {
+                    assert(2 =i= choice_tag);
+                    let choice_fields =
+                      constr_fields_of(choice_data);
+                    let choice_bytes =
+                      list_first_bytes(choice_fields);
+                    !
+                      (chooseList(tailList(choice_fields), #(), #error))
+                  }
+              }
+            )
+      }
+    )
+}
+
+@captures 2;
+fn assert_tagged_single_byte_data_template(constr_tag_of, constr_fields_of, tagged_bytes_data) {
+  let tagged_bytes_tag =
+    constr_tag_of(tagged_bytes_data);
+  !
+    (
+      if (0 =i= tagged_bytes_tag) {
+        #
+          {
+            let tagged_bytes_fields =
+              constr_fields_of(tagged_bytes_data);
+            let tagged_bytes =
+              list_first_bytes(tagged_bytes_fields);
+            !
+              (chooseList(tailList(tagged_bytes_fields), #(), #error))
+          }
+      } else {
+        #
+          {
+            assert(1 =i= tagged_bytes_tag);
+            let tagged_bytes_fields =
+              constr_fields_of(tagged_bytes_data);
+            let tagged_bytes =
+              list_first_bytes(tagged_bytes_fields);
+            !
+              (chooseList(tailList(tagged_bytes_fields), #(), #error))
+          }
+      }
+    )
+}
+
+@captures 2;
+fn assert_tagged_single_int_template(constr_tag_of, constr_fields_of, tagged_int_data) {
+  let tagged_int_tag =
+    constr_tag_of(tagged_int_data);
+  !
+    (
+      if (0 =i= tagged_int_tag) {
+        #
+          {
+            let tagged_int_fields =
+              constr_fields_of(tagged_int_data);
+            let tagged_int =
+              list_first_int(tagged_int_fields);
+            !
+              (chooseList(tailList(tagged_int_fields), #(), #error))
+          }
+      } else {
+        #
+          {
+            assert(1 =i= tagged_int_tag);
+            let tagged_int_fields =
+              constr_fields_of(tagged_int_data);
+            let tagged_int =
+              list_first_int(tagged_int_fields);
+            !
+              (chooseList(tailList(tagged_int_fields), #(), #error))
+          }
+      }
+    )
+}
+
+@captures 1;
+fn list_first(list_items) {
+  headList(list_items)
+}
+
+@captures 1;
+fn list_second(list_items) {
+  headList(tailList(list_items))
+}
+
+@captures 1;
+fn list_first_int(list_items) {
+  unIData(headList(list_items))
+}
+
+@captures 1;
+fn list_first_bytes(list_items) {
+  unBData(headList(list_items))
+}
+
+@captures 1;
+fn list_first_list(list_items) {
+  unListData(headList(list_items))
+}
+
+@captures 1;
+fn list_first_map(list_items) {
+  unMapData(headList(list_items))
+}
+
+@captures 2;
+fn tx_info_withdrawals_map(constr_fields_of, tx_info_data) {
+  list_first_map(tailList(tailList(tailList(tailList(tailList(tailList(constr_fields_of(tx_info_data))))))))
+}
+
+@captures 1;
+fn data_pair_from_list(list_items) {
+  mkPairData(headList(list_items), list_second(list_items))
+}
+
+@captures 1;
+fn list_first_constr_tag(list_items) {
+  fstPair(unConstrData(headList(list_items)))
+}
+
+@captures 1;
+fn contains_byte_string_entry(byte_string_list, target_bytes) {
+  zcom fn (contains_bytes, remaining_items) {
+    !
+      (chooseList(
+        remaining_items,
+        #False,
+        #
+          {
+            let candidate_bytes =
+              list_first_bytes(remaining_items);
+            let remaining_byte_strings_tail =
+              tailList(remaining_items);
+            or { candidate_bytes =b= target_bytes, contains_bytes(contains_bytes, remaining_byte_strings_tail) }
+          }
+      ))
+  }(byte_string_list)
+}
+
+@captures 2;
+fn contains_nested_data_entry(candidate_entries, constr_fields_of, expected_nested_data) {
+  zcom fn (contains_nested_data, remaining_candidates) {
+    !
+      (chooseList(
+        remaining_candidates,
+        #False,
+        #
+          {
+            let candidate_entry =
+              headList(remaining_candidates);
+            let remaining_candidates_tail =
+              tailList(remaining_candidates);
+            or { constr_first_field(constr_first_field(constr_second_field(candidate_entry))) =d= expected_nested_data,
+              contains_nested_data(contains_nested_data, remaining_candidates_tail) }
+          }
+      ))
+  }(candidate_entries)
+}
+
+
+@captures 0;
+fn sha3_hash_bytes(bytes_to_hash) {
+  sha3_256(bytes_to_hash)
+}
+
+@captures 0;
+fn append_bytes(left_bytes, right_bytes) {
+  left_bytes ++ right_bytes
+}
+
+@captures 0;
+fn filter_data_list_worker(input_items, predicate) {
+  zcom fn (filter_items, remaining_items) {
+    !
+      (chooseList(
+        remaining_items,
+        #list<data>[],
+        #
+          {
+            let [current_item, remaining_after_item] =
+              remaining_items;
+            !
+              (if (predicate(current_item)) { #mkCons(current_item, filter_items(filter_items, remaining_after_item)) } else { #filter_items(filter_items,
+                remaining_after_item) })
+          }
+      ))
+  }(input_items)
+}
+
+@captures 0;
+fn compare_bytes_ordering(left_bytes, right_bytes) {
+  !if (left_bytes <b< right_bytes) { #data(constr 0 []) } else { #!(if (left_bytes =b= right_bytes) { #data(constr 1 []) } else { #data(constr 2 []) }) }
+}
+
+

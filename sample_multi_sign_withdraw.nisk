@@ -1,0 +1,220 @@
+program_name "sample_multi_sign_withdraw";
+language plutus_v2;
+flat_hash "2e5b4c633217f5da2c206c32af8c73bcd316b6c7144a097bb355996fd46103fb";
+branch "agent/minswap-reverse-engineer";
+
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (redeemer_or_datum, script_context_or_redeemer) {
+    !
+      (
+        if (0 =i= constr_tag_of(script_context_or_redeemer)) {
+          #
+            !
+              (
+                if (
+                  {
+                    let script_context_fields =
+                      constr_fields_of(script_context_or_redeemer);
+                    let [tx_info, script_context_after_tx_info] =
+                      script_context_fields;
+                    let script_purpose =
+                      list_first(script_context_after_tx_info);
+                    let tx_info_fields =
+                      constr_fields_of(tx_info);
+                    let tx_info_after_inputs =
+                      tailList(tx_info_fields);
+                    let [tx_reference_inputs << unListData, tx_info_after_reference_inputs] =
+                      tx_info_after_inputs;
+                    let tx_info_after_outputs =
+                      tailList(tx_info_after_reference_inputs);
+                    let tx_info_after_fee =
+                      tailList(tx_info_after_outputs);
+                    let tx_info_after_mint =
+                      tailList(tx_info_after_fee);
+                    let tx_info_after_certificates =
+                      tailList(tx_info_after_mint);
+                    let tx_info_after_withdrawals =
+                      tailList(tx_info_after_certificates);
+                    let tx_info_after_valid_range =
+                      tailList(tx_info_after_withdrawals);
+                    let tx_signatories =
+                      list_first_list(tx_info_after_valid_range);
+                    assert(2 =i= constr_tag_of(script_purpose));
+                    let script_purpose_fields =
+                      constr_fields_of(script_purpose);
+                    let reward_credential =
+                      list_first(script_purpose_fields);
+                    assert(0 =i= constr_tag_of(reward_credential));
+                    let reward_credential_fields =
+                      constr_fields_of(reward_credential);
+                    let staking_credential =
+                      list_first(reward_credential_fields);
+                    assert(1 =i= constr_tag_of(staking_credential));
+                    let staking_credential_fields =
+                      constr_fields_of(staking_credential);
+                    let staking_credential_hash =
+                      list_first_bytes(staking_credential_fields);
+                    let own_reference_input_option =
+                      {
+                        let find_reference_input =
+                          find_reference_input_template(constr_fields_of, constr_tag_of, staking_credential_hash);
+                        find_reference_input(find_reference_input, tx_reference_inputs)
+                      };
+                    assert(0 =i= constr_tag_of(own_reference_input_option));
+                    let own_reference_input_option_fields =
+                      constr_fields_of(own_reference_input_option);
+                    let own_reference_input =
+                      list_first(own_reference_input_option_fields);
+                    let own_reference_input_fields =
+                      constr_fields_of(own_reference_input);
+                    let after_own_reference_input_ref =
+                      tailList(own_reference_input_fields);
+                    let own_resolved_output =
+                      list_first(after_own_reference_input_ref);
+                    let own_resolved_output_fields =
+                      constr_fields_of(own_resolved_output);
+                    let after_own_resolved_output_address =
+                      tailList(own_resolved_output_fields);
+                    let after_own_resolved_output_value =
+                      tailList(after_own_resolved_output_address);
+                    let own_output_datum =
+                      list_first(after_own_resolved_output_value);
+                    assert(2 =i= constr_tag_of(own_output_datum));
+                    let own_output_datum_fields =
+                      constr_fields_of(own_output_datum);
+                    let inline_datum =
+                      list_first(own_output_datum_fields);
+                    validate_required_signer_list(tx_signatories, constr_fields_of, inline_datum)(
+                      {
+                        let inline_datum_tag =
+                          constr_tag_of(inline_datum);
+                        assert(0 =i= inline_datum_tag);
+                        let inline_datum_fields =
+                          constr_fields_of(inline_datum);
+                        let required_signers =
+                          list_first_list(inline_datum_fields);
+                        !
+                          (chooseList(
+                            tailList(inline_datum_fields),
+                            #
+                              {
+                                let checked_required_signers =
+                                  {
+                                    let assert_all_bytes =
+                                      assert_all_bytes_template(());
+                                    assert_all_bytes(assert_all_bytes, required_signers)
+                                  };
+                                ()
+                              },
+                            #error
+                          ))
+                      }
+                    )
+                  }
+                ) {
+                  #()
+                } else {
+                  #
+                    proc {
+                      !error;
+                      error
+                    }
+                }
+              )
+        } else {
+          #
+            {
+              let redeemer_head =
+                list_first(constr_fields_of(script_context_or_redeemer));
+              fn (script_context) {
+                let checked_required_signer_datum =
+                  {
+                    let required_signer_datum_tag =
+                      constr_tag_of(redeemer_or_datum);
+                    assert(0 =i= required_signer_datum_tag);
+                    let required_signer_datum_fields =
+                      constr_fields_of(redeemer_or_datum);
+                    let datum_required_signers =
+                      list_first_list(required_signer_datum_fields);
+                    !
+                      (chooseList(
+                        tailList(required_signer_datum_fields),
+                        #
+                          {
+                            let checked_datum_signers =
+                              {
+                                let assert_all_bytes =
+                                  assert_all_bytes_template(());
+                                assert_all_bytes(assert_all_bytes, datum_required_signers)
+                              };
+                            ()
+                          },
+                        #error
+                      ))
+                  };
+                !
+                  (
+                    if (
+                      {
+                        let script_context_fields =
+                          constr_fields_of(script_context);
+                        let [tx_info, script_context_after_tx_info] =
+                          script_context_fields;
+                        let script_purpose =
+                          list_first(script_context_after_tx_info);
+                        let tx_info_fields =
+                          constr_fields_of(tx_info);
+                        let tx_info_after_inputs =
+                          tailList(tx_info_fields);
+                        let tx_info_after_reference_inputs =
+                          tailList(tx_info_after_inputs);
+                        let tx_info_after_outputs =
+                          tailList(tx_info_after_reference_inputs);
+                        let tx_info_after_fee =
+                          tailList(tx_info_after_outputs);
+                        let tx_info_after_mint =
+                          tailList(tx_info_after_fee);
+                        let tx_info_after_certificates =
+                          tailList(tx_info_after_mint);
+                        let tx_info_after_withdrawals =
+                          tailList(tx_info_after_certificates);
+                        let tx_info_after_valid_range =
+                          tailList(tx_info_after_withdrawals);
+                        let tx_signatories =
+                          list_first_list(tx_info_after_valid_range);
+                        assert(1 =i= constr_tag_of(script_purpose));
+                        let required_signer_fields =
+                          constr_fields_of(redeemer_or_datum);
+                        let required_signers =
+                          list_first_list(required_signer_fields);
+                        let all_required_signers_present =
+                          all_required_signers_present_template(tx_signatories);
+                        all_required_signers_present(all_required_signers_present, required_signers)
+                      }
+                    ) {
+                      #()
+                    } else {
+                      #
+                        proc {
+                          !error;
+                          error
+                        }
+                    }
+                  )
+              }
+            }
+        }
+      )
+  }
+}

@@ -1,0 +1,904 @@
+program_name "order_validator_validate_order";
+language plutus_v2;
+flat_hash "26be82a615714f4744f42f1261e1e51a15e459fc044708eda52740dcbe607cbb";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (pool_batching_credential, expired_order_cancel_credential, order_datum, order_redeemer, script_context) {
+    !
+    (
+      if (
+      {
+        let script_context_fields =
+          constr_fields_of(script_context);
+        let tx_info_data =
+          list_first(script_context_fields);
+        let script_context_tail =
+          tailList(script_context_fields);
+        let spending_purpose_data =
+          list_first(script_context_tail);
+        assert(1 =i= constr_tag_of(spending_purpose_data));
+        let order_redeemer_shape_checked =
+          {
+          let order_redeemer_tag =
+            constr_tag_of(order_redeemer);
+          !
+          (
+          if (0 =i= order_redeemer_tag) {
+            #
+            !
+            (chooseList(constr_fields_of(order_redeemer), #(), #error))
+          } else {
+            #
+            !
+            (
+            if (1 =i= order_redeemer_tag) {
+              #
+              !
+              (chooseList(constr_fields_of(order_redeemer), #(), #error))
+            } else {
+              #
+              {
+                assert(2 =i= order_redeemer_tag);
+                !
+                (chooseList(constr_fields_of(order_redeemer), #(), #error))
+              }
+            }
+            )
+          }
+          )
+        };
+        let order_redeemer_tag =
+          constr_tag_of(order_redeemer);
+        let map_contains_data_key =
+          map_contains_data_key_template(());
+        !
+        (
+        if (0 =i= order_redeemer_tag) {
+          #
+          (map_contains_data_key(tx_info_withdrawals_map(constr_fields_of, tx_info_data),
+          pool_batching_credential))
+        } else {
+          #
+          !
+          (
+          if (1 =i= order_redeemer_tag) {
+            #
+            {
+              let tx_info_fields =
+                constr_fields_of(tx_info_data);
+              let tx_inputs =
+                list_first_list(tx_info_fields);
+              let after_tx_inputs =
+                tailList(tx_info_fields);
+              let after_reference_inputs =
+                tailList(after_tx_inputs);
+              let after_tx_outputs =
+                tailList(after_reference_inputs);
+              let after_tx_fee =
+                tailList(after_tx_outputs);
+              let tx_mint_value =
+                list_first_map(after_tx_fee);
+              let after_tx_mint =
+                tailList(after_tx_fee);
+              let after_dcerts =
+                tailList(after_tx_mint);
+              let tx_withdrawals =
+                list_first_map(after_dcerts);
+              let after_withdrawals =
+                tailList(after_dcerts);
+              let after_valid_range =
+                tailList(after_withdrawals);
+              let tx_signatories =
+                list_first_list(after_valid_range);
+              let order_datum_shape_checked =
+                {
+                let assert_tagged_single_byte_data =
+                  assert_tagged_single_byte_data_template(constr_tag_of, constr_fields_of);
+                let validate_asset_pair =
+                  validate_asset_pair_data(constr_tag_of, constr_fields_of);
+                let assert_tagged_single_int_data =
+                  assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+                let assert_tagged_single_int_bound =
+                  assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+                let assert_address_data =
+                  assert_address_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data);
+                let assert_output_datum_choice_data =
+                  assert_empty_or_hashed_datum_choice_template(constr_tag_of, constr_fields_of);
+                let order_datum_tag =
+                  constr_tag_of(order_datum);
+                assert(0 =i= order_datum_tag);
+                let order_datum_fields =
+                  constr_fields_of(order_datum);
+                let canceller_data =
+                  list_first(order_datum_fields);
+                let after_canceller =
+                  tailList(order_datum_fields);
+                let refund_receiver_data =
+                  list_first(after_canceller);
+                let after_refund_receiver =
+                  tailList(after_canceller);
+                let refund_receiver_datum_data =
+                  list_first(after_refund_receiver);
+                let after_refund_receiver_datum =
+                  tailList(after_refund_receiver);
+                let success_receiver_data =
+                  list_first(after_refund_receiver_datum);
+                let after_success_receiver =
+                  tailList(after_refund_receiver_datum);
+                let success_receiver_datum_data =
+                  list_first(after_success_receiver);
+                let after_success_receiver_datum =
+                  tailList(after_success_receiver);
+                let lp_asset_data =
+                  list_first(after_success_receiver_datum);
+                let after_lp_asset =
+                  tailList(after_success_receiver_datum);
+                let order_step_data =
+                  list_first(after_lp_asset);
+                let after_order_step =
+                  tailList(after_lp_asset);
+                let max_batcher_fee =
+                  list_first_int(after_order_step);
+                let after_max_batcher_fee =
+                  tailList(after_order_step);
+                let expiry_setting_option_data =
+                  list_first(after_max_batcher_fee);
+                !
+                (chooseList(
+                tailList(after_max_batcher_fee),
+                #
+                {
+                  let canceller_shape_checked =
+                    {
+                    let canceller_tag =
+                      constr_tag_of(canceller_data);
+                    !
+                    (
+                    if (0 =i= canceller_tag) {
+                      #
+                      {
+                        let canceller_fields =
+                          constr_fields_of(canceller_data);
+                        let canceller_author_hash =
+                          list_first_bytes(canceller_fields);
+                        !
+                        (chooseList(tailList(canceller_fields), #(), #error))
+                      }
+                    } else {
+                      #
+                      !
+                      (
+                      if (1 =i= canceller_tag) {
+                        #
+                        {
+                          let canceller_fields =
+                            constr_fields_of(canceller_data);
+                          let canceller_author_hash =
+                            list_first_bytes(canceller_fields);
+                          !
+                          (chooseList(tailList(canceller_fields), #(), #error))
+                        }
+                      } else {
+                        #
+                        !
+                        (
+                        if (2 =i= canceller_tag) {
+                          #
+                          {
+                            let canceller_fields =
+                              constr_fields_of(canceller_data);
+                            let canceller_author_hash =
+                              list_first_bytes(canceller_fields);
+                            !
+                            (chooseList(tailList(canceller_fields), #(), #error))
+                          }
+                        } else {
+                          #
+                          {
+                            assert(3 =i= canceller_tag);
+                            let canceller_fields =
+                              constr_fields_of(canceller_data);
+                            let canceller_author_hash =
+                              list_first_bytes(canceller_fields);
+                            !
+                            (chooseList(tailList(canceller_fields), #(), #error))
+                          }
+                        }
+                        )
+                      }
+                      )
+                    }
+                    )
+                  };
+                  let refund_receiver_checked =
+                    assert_address_data(refund_receiver_data);
+                  let refund_receiver_datum_checked =
+                    assert_output_datum_choice_data(refund_receiver_datum_data);
+                  let success_receiver_checked =
+                    assert_address_data(success_receiver_data);
+                  let success_receiver_datum_checked =
+                    assert_output_datum_choice_data(success_receiver_datum_data);
+                  let lp_asset_checked =
+                    validate_asset_pair(lp_asset_data);
+                  let order_step_shape_checked =
+                    {
+                    let order_step_tag =
+                      constr_tag_of(order_step_data);
+                    !
+                    (
+                    if (0 =i= order_step_tag) {
+                      #
+                      {
+                        let swap_exact_in_fields =
+                          constr_fields_of(order_step_data);
+                        let swap_exact_in_a_to_b =
+                          1 =i= list_first_constr_tag(swap_exact_in_fields);
+                        let swap_exact_in_after_direction =
+                          tailList(swap_exact_in_fields);
+                        let swap_exact_in_amount_option_data =
+                          list_first(swap_exact_in_after_direction);
+                        let swap_exact_in_after_amount_option =
+                          tailList(swap_exact_in_after_direction);
+                        let swap_exact_in_minimum_receive =
+                          list_first_int(swap_exact_in_after_amount_option);
+                        let swap_exact_in_after_minimum_receive =
+                          tailList(swap_exact_in_after_amount_option);
+                        let swap_exact_in_killable =
+                          1 =i= list_first_constr_tag(swap_exact_in_after_minimum_receive);
+                        !
+                        (chooseList(
+                        tailList(swap_exact_in_after_minimum_receive),
+                        #
+                        {
+                          let swap_exact_in_amount_option_checked =
+                            assert_tagged_single_int_bound(swap_exact_in_amount_option_data);
+                          ()
+                        },
+                        #error
+                        ))
+                      }
+                    } else {
+                      #
+                      !
+                      (
+                      if (1 =i= order_step_tag) {
+                        #
+                        {
+                          let stop_loss_fields =
+                            constr_fields_of(order_step_data);
+                          let stop_loss_a_to_b =
+                            1 =i= list_first_constr_tag(stop_loss_fields);
+                          let stop_loss_after_direction =
+                            tailList(stop_loss_fields);
+                          let stop_loss_amount_option_data =
+                            list_first(stop_loss_after_direction);
+                          let stop_loss_after_amount_option =
+                            tailList(stop_loss_after_direction);
+                          let stop_loss_receive =
+                            list_first_int(stop_loss_after_amount_option);
+                          !
+                          (chooseList(
+                          tailList(stop_loss_after_amount_option),
+                          #
+                          {
+                            let stop_loss_amount_option_checked =
+                              assert_tagged_single_int_bound(stop_loss_amount_option_data);
+                            ()
+                          },
+                          #error
+                          ))
+                        }
+                      } else {
+                        #
+                        !
+                        (
+                        if (2 =i= order_step_tag) {
+                          #
+                          {
+                            let oco_fields =
+                              constr_fields_of(order_step_data);
+                            let oco_a_to_b =
+                              1 =i= list_first_constr_tag(oco_fields);
+                            let oco_after_direction =
+                              tailList(oco_fields);
+                            let oco_amount_option_data =
+                              list_first(oco_after_direction);
+                            let oco_after_amount_option =
+                              tailList(oco_after_direction);
+                            let oco_minimum_receive =
+                              list_first_int(oco_after_amount_option);
+                            let oco_after_minimum_receive =
+                              tailList(oco_after_amount_option);
+                            let oco_stop_loss_receive =
+                              list_first_int(oco_after_minimum_receive);
+                            !
+                            (chooseList(
+                            tailList(oco_after_minimum_receive),
+                            #
+                            {
+                              let oco_amount_option_checked =
+                                assert_tagged_single_int_bound(oco_amount_option_data);
+                              ()
+                            },
+                            #error
+                            ))
+                          }
+                        } else {
+                          #
+                          !
+                          (
+                          if (3 =i= order_step_tag) {
+                            #
+                            {
+                              let swap_exact_out_fields =
+                                constr_fields_of(order_step_data);
+                              let swap_exact_out_a_to_b =
+                                (
+                              1
+                              =i=
+                                list_first_constr_tag(swap_exact_out_fields)
+                              );
+                              let swap_exact_out_after_direction =
+                                tailList(swap_exact_out_fields);
+                              let swap_exact_out_max_amount_option_data =
+                                list_first(swap_exact_out_after_direction);
+                              let swap_exact_out_after_amount_option =
+                                tailList(swap_exact_out_after_direction);
+                              let swap_exact_out_expected_receive =
+                                list_first_int(swap_exact_out_after_amount_option);
+                              let swap_exact_out_after_expected_receive =
+                                tailList(swap_exact_out_after_amount_option);
+                              let swap_exact_out_killable =
+                                (
+                              1
+                              =i=
+                                list_first_constr_tag(swap_exact_out_after_expected_receive)
+                              );
+                              !
+                              (chooseList(
+                              tailList(swap_exact_out_after_expected_receive),
+                              #
+                              {
+                                let swap_exact_out_amount_option_checked =
+                                  assert_tagged_single_int_bound(swap_exact_out_max_amount_option_data);
+                                ()
+                              },
+                              #error
+                              ))
+                            }
+                          } else {
+                            #
+                            !
+                            (
+                            if (4 =i= order_step_tag) {
+                              #
+                              {
+                                let deposit_fields =
+                                  constr_fields_of(order_step_data);
+                                let deposit_amount_option_data =
+                                  list_first(deposit_fields);
+                                let deposit_after_amount_option =
+                                  tailList(deposit_fields);
+                                let deposit_minimum_lp =
+                                  list_first_int(deposit_after_amount_option);
+                                let deposit_after_minimum_lp =
+                                  tailList(deposit_after_amount_option);
+                                let deposit_killable =
+                                  (
+                                1
+                                =i=
+                                  list_first_constr_tag(deposit_after_minimum_lp)
+                                );
+                                !
+                                (chooseList(
+                                tailList(deposit_after_minimum_lp),
+                                #
+                                {
+                                  let deposit_amount_option_checked =
+                                    {
+                                    let deposit_amount_option_tag =
+                                      constr_tag_of(deposit_amount_option_data);
+                                    !
+                                    (
+                                    if (0 =i= deposit_amount_option_tag) {
+                                      #
+                                      {
+                                        let specific_deposit_fields =
+                                          constr_fields_of(deposit_amount_option_data);
+                                        let specific_deposit_amount_a =
+                                          list_first_int(specific_deposit_fields);
+                                        let specific_deposit_tail =
+                                          tailList(specific_deposit_fields);
+                                        let specific_deposit_amount_b =
+                                          list_first_int(specific_deposit_tail);
+                                        !
+                                        (chooseList(
+                                        tailList(specific_deposit_tail),
+                                        #(),
+                                        #error
+                                        ))
+                                      }
+                                    } else {
+                                      #
+                                      {
+                                        assert(
+                                        (
+                                        1
+                                        =i=
+                                          deposit_amount_option_tag
+                                        )
+                                        );
+                                        let all_deposit_fields =
+                                          constr_fields_of(deposit_amount_option_data);
+                                        let all_deposit_deducted_amount_a =
+                                          list_first_int(all_deposit_fields);
+                                        let all_deposit_tail =
+                                          tailList(all_deposit_fields);
+                                        let all_deposit_deducted_amount_b =
+                                          list_first_int(all_deposit_tail);
+                                        !
+                                        (chooseList(
+                                        tailList(all_deposit_tail),
+                                        #(),
+                                        #error
+                                        ))
+                                      }
+                                    }
+                                    )
+                                  };
+                                  ()
+                                },
+                                #error
+                                ))
+                              }
+                            } else {
+                              #
+                              !
+                              (
+                              if (5 =i= order_step_tag) {
+                                #
+                                {
+                                  let withdraw_fields =
+                                    constr_fields_of(order_step_data);
+                                  let withdrawal_amount_option_data =
+                                    list_first(withdraw_fields);
+                                  let withdraw_after_amount_option =
+                                    tailList(withdraw_fields);
+                                  let withdraw_minimum_asset_a =
+                                    list_first_int(withdraw_after_amount_option);
+                                  let withdraw_after_minimum_asset_a =
+                                    tailList(withdraw_after_amount_option);
+                                  let withdraw_minimum_asset_b =
+                                    list_first_int(withdraw_after_minimum_asset_a);
+                                  let withdraw_after_minimum_asset_b =
+                                    tailList(withdraw_after_minimum_asset_a);
+                                  let withdraw_killable =
+                                    (
+                                  1
+                                  =i=
+                                    list_first_constr_tag(withdraw_after_minimum_asset_b)
+                                  );
+                                  !
+                                  (chooseList(
+                                  tailList(withdraw_after_minimum_asset_b),
+                                  #
+                                  {
+                                    let withdrawal_amount_option_checked =
+                                      assert_tagged_single_int_data(
+                                    withdrawal_amount_option_data);
+                                    ()
+                                  },
+                                  #error
+                                  ))
+                                }
+                              } else {
+                                #
+                                !
+                                (
+                                if (6 =i= order_step_tag) {
+                                  #
+                                  {
+                                    let zap_out_fields =
+                                      constr_fields_of(order_step_data);
+                                    let zap_out_a_to_b =
+                                      (
+                                    1
+                                    =i=
+                                      list_first_constr_tag(zap_out_fields)
+                                    );
+                                    let zap_out_after_direction =
+                                      tailList(zap_out_fields);
+                                    let zap_out_withdrawal_amount_option_data =
+                                      list_first(zap_out_after_direction);
+                                    let zap_out_after_amount_option =
+                                      tailList(zap_out_after_direction);
+                                    let zap_out_minimum_receive =
+                                      list_first_int(zap_out_after_amount_option);
+                                    let zap_out_after_minimum_receive =
+                                      tailList(zap_out_after_amount_option);
+                                    let zap_out_killable =
+                                      (
+                                    1
+                                    =i=
+                                      list_first_constr_tag(zap_out_after_minimum_receive)
+                                    );
+                                    !
+                                    (chooseList(
+                                    tailList(zap_out_after_minimum_receive),
+                                    #
+                                    {
+                                      let zap_out_withdrawal_amount_option_checked =
+                                        assert_tagged_single_int_data(
+                                      zap_out_withdrawal_amount_option_data);
+                                      ()
+                                    },
+                                    #error
+                                    ))
+                                  }
+                                } else {
+                                  #
+                                  !
+                                  (
+                                  if (7 =i= order_step_tag) {
+                                    #
+                                    {
+                                      let partial_swap_fields =
+                                        constr_fields_of(order_step_data);
+                                      let partial_swap_a_to_b =
+                                        (
+                                      1
+                                      =i=
+                                        list_first_constr_tag(partial_swap_fields)
+                                      );
+                                      let partial_swap_after_direction =
+                                        tailList(partial_swap_fields);
+                                      let partial_swap_total_swap_amount =
+                                        list_first_int(partial_swap_after_direction);
+                                      let partial_swap_after_total_amount =
+                                        tailList(partial_swap_after_direction);
+                                      let partial_swap_io_ratio_numerator =
+                                        list_first_int(partial_swap_after_total_amount);
+                                      let partial_swap_after_ratio_numerator =
+                                        tailList(partial_swap_after_total_amount);
+                                      let partial_swap_io_ratio_denominator =
+                                        list_first_int(partial_swap_after_ratio_numerator);
+                                      let partial_swap_after_ratio_denominator =
+                                        tailList(partial_swap_after_ratio_numerator);
+                                      let partial_swap_hops =
+                                        list_first_int(partial_swap_after_ratio_denominator);
+                                      let partial_swap_after_hops =
+                                        tailList(
+                                      partial_swap_after_ratio_denominator);
+                                      let partial_swap_minimum_swap_amount_required =
+                                        list_first_int(partial_swap_after_hops);
+                                      let partial_swap_after_minimum_required =
+                                        tailList(partial_swap_after_hops);
+                                      let partial_swap_max_batcher_fee_each_time =
+                                        list_first_int(partial_swap_after_minimum_required);
+                                      !
+                                      (chooseList(
+                                      tailList(
+                                      partial_swap_after_minimum_required),
+                                      #(),
+                                      #error
+                                      ))
+                                    }
+                                  } else {
+                                    #
+                                    !
+                                    (
+                                    if (8 =i= order_step_tag) {
+                                      #
+                                      {
+                                        let withdraw_imbalance_fields =
+                                          constr_fields_of(order_step_data);
+                                        let
+                                        withdraw_imbalance_amount_option_data =
+                                          list_first(withdraw_imbalance_fields);
+                                        let
+                                        withdraw_imbalance_after_amount_option =
+                                          tailList(withdraw_imbalance_fields);
+                                        let withdraw_imbalance_ratio_asset_a =
+                                          list_first_int(withdraw_imbalance_after_amount_option);
+                                        let
+                                        withdraw_imbalance_after_ratio_asset_a =
+                                          tailList(
+                                        withdraw_imbalance_after_amount_option);
+                                        let withdraw_imbalance_ratio_asset_b =
+                                          list_first_int(withdraw_imbalance_after_ratio_asset_a);
+                                        let
+                                        withdraw_imbalance_after_ratio_asset_b =
+                                          tailList(
+                                        withdraw_imbalance_after_ratio_asset_a);
+                                        let withdraw_imbalance_minimum_asset_a =
+                                          list_first_int(withdraw_imbalance_after_ratio_asset_b);
+                                        let
+                                        withdraw_imbalance_after_minimum_asset_a
+                                        =
+                                          tailList(
+                                        withdraw_imbalance_after_ratio_asset_b);
+                                        let withdraw_imbalance_killable =
+                                          (
+                                        1
+                                        =i=
+                                          list_first_constr_tag(
+                                        withdraw_imbalance_after_minimum_asset_a)
+                                        );
+                                        !
+                                        (chooseList(
+                                        tailList(
+                                        withdraw_imbalance_after_minimum_asset_a),
+                                        #
+                                        {
+                                          let
+                                          withdraw_imbalance_amount_option_checked
+                                          =
+                                            assert_tagged_single_int_data(
+                                          withdraw_imbalance_amount_option_data);
+                                          ()
+                                        },
+                                        #error
+                                        ))
+                                      }
+                                    } else {
+                                      #
+                                      !
+                                      (
+                                      if (9 =i= order_step_tag) {
+                                        #
+                                        {
+                                          let swap_multi_routing_fields =
+                                            constr_fields_of(
+                                          order_step_data);
+                                          let swap_routings =
+                                            list_first_list(swap_multi_routing_fields);
+                                          let swap_multi_after_routings =
+                                            tailList(
+                                          swap_multi_routing_fields);
+                                          let
+                                          swap_multi_amount_option_data =
+                                            list_first(
+                                          swap_multi_after_routings);
+                                          let
+                                          swap_multi_after_amount_option =
+                                            tailList(
+                                          swap_multi_after_routings);
+                                          let swap_multi_minimum_receive =
+                                            list_first_int(swap_multi_after_amount_option);
+                                          !
+                                          (chooseList(
+                                          tailList(
+                                          swap_multi_after_amount_option),
+                                          #
+                                          {
+                                            let
+                                            swap_routings_checked =
+                                              {
+                                              let
+                                              assert_swap_routing_list =
+                                                assert_routing_list_template(constr_tag_of, constr_fields_of, list_first_constr_tag, validate_asset_pair);
+                                              assert_swap_routing_list(
+                                              assert_swap_routing_list,
+                                              swap_routings
+                                              )
+                                            };
+                                            let
+                                            swap_multi_amount_option_checked =
+                                              assert_tagged_single_int_bound(swap_multi_amount_option_data);
+                                            ()
+                                          },
+                                          #error
+                                          ))
+                                        }
+                                      } else {
+                                        #
+                                        {
+                                          assert(
+                                          (
+                                          10
+                                          =i=
+                                            order_step_tag
+                                          )
+                                          );
+                                          !
+                                          (chooseList(
+                                          constr_fields_of(
+                                          order_step_data),
+                                          #(),
+                                          #error
+                                          ))
+                                        }
+                                      }
+                                      )
+                                    }
+                                    )
+                                  }
+                                  )
+                                }
+                                )
+                              }
+                              )
+                            }
+                            )
+                          }
+                          )
+                        }
+                        )
+                      }
+                      )
+                    }
+                    )
+                  };
+                  let expiry_setting_checked =
+                    {
+                    let expiry_setting_tag =
+                      constr_tag_of(expiry_setting_option_data);
+                    !
+                    (
+                    if (0 =i= expiry_setting_tag) {
+                      #
+                      {
+                        let expiry_setting_fields =
+                          constr_fields_of(expiry_setting_option_data);
+                        let expiry_pair_fields =
+                          {
+                          let expiry_pair_fields =
+                            list_first_list(expiry_setting_fields);
+                          data_pair_from_list(expiry_pair_fields)
+                        };
+                        !
+                        (chooseList(
+                        tailList(expiry_setting_fields),
+                        #
+                        {
+                          let expiry_setting_values_checked =
+                            {
+                            let expired_time =
+                              unIData(fstPair(expiry_pair_fields));
+                            unIData(sndPair(expiry_pair_fields))
+                          };
+                          ()
+                        },
+                        #error
+                        ))
+                      }
+                    } else {
+                      #
+                      {
+                        assert(1 =i= expiry_setting_tag);
+                        !
+                        (chooseList(constr_fields_of(expiry_setting_option_data), #(), #error))
+                      }
+                    }
+                    )
+                  };
+                  ()
+                },
+                #error
+                ))
+              };
+              let order_datum_fields =
+                constr_fields_of(order_datum);
+              let canceller_data =
+                list_first(order_datum_fields);
+              let canceller_tag =
+                constr_tag_of(canceller_data);
+              !
+              (
+              if (0 =i= canceller_tag) {
+                #
+                (contains_byte_string_entry(tx_signatories)(list_first_bytes(constr_fields_of(canceller_data))))
+              } else {
+                #
+                !
+                (
+                if (1 =i= canceller_tag) {
+                  #
+                  {
+                    let spend_script_fields =
+                      constr_fields_of(canceller_data);
+                    let spend_script_hash =
+                      list_first_bytes(spend_script_fields);
+                    contains_nested_data_entry(tx_inputs, constr_fields_of)(
+                    constrData(1, mkCons(bData(spend_script_hash), list<data>[]))
+                    )
+                  }
+                } else {
+                  #
+                  !
+                  (
+                  if (2 =i= canceller_tag) {
+                    #
+                    (map_contains_data_key(
+                    tx_withdrawals,
+                    constrData(0, mkCons(constrData(1, mkCons(list_first(constr_fields_of(canceller_data)), list<data>[])),
+                    list<data>[]))
+                    ))
+                  } else {
+                    #
+                    (
+                    if (
+                    (
+                    (unIData(
+                    sndPair(
+                    list_first(
+                    (
+                    fn (value_map, target_policy_id) {
+                      let policy_assets_option =
+                        {
+                        let find_policy_assets =
+                          find_policy_entry_template(target_policy_id);
+                        find_policy_assets(find_policy_assets, value_map)
+                      };
+                      let policy_assets_option_tag =
+                        constr_tag_of(policy_assets_option);
+                      !
+                      (
+                      if (1 =i= policy_assets_option_tag) {
+                        #list<pair<data, data>>[]
+                      } else {
+                        #
+                        list_first_map(constr_fields_of(policy_assets_option))
+                      }
+                      )
+                    }
+                    {
+                      let remove_ada_policy_entries =
+                        remove_ada_entries_template(());
+                      remove_ada_policy_entries(remove_ada_policy_entries, tx_mint_value)
+                    }
+                    list_first_bytes(constr_fields_of(canceller_data))
+                    )
+                    )
+                    )
+                    ))
+                    =i=
+                      0
+                    )
+                    ) {
+                      False
+                    } else {
+                      True
+                    }
+                    )
+                  }
+                  )
+                }
+                )
+              }
+              )
+            }
+          } else {
+            #
+            (map_contains_data_key(
+            tx_info_withdrawals_map(constr_fields_of, tx_info_data),
+            expired_order_cancel_credential
+            ))
+          }
+          )
+        }
+        )
+      }
+      ) {
+        #()
+      } else {
+        #
+        proc {
+          !error;
+          error
+        }
+      }
+    )
+  }
+}

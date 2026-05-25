@@ -1,0 +1,547 @@
+program_name "factory_validator_validate_factory";
+language plutus_v2;
+flat_hash "3549a2528ac2ef887539323552bd8645d50027036015262673ba8b3299969216";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  let constr_fields_of =
+    constr_fields;
+  let constr_tag_of =
+    constr_tag;
+  fn (factory_policy_data) {
+    let factory_policy_id =
+      unBData(factory_policy_data);
+    fn (
+      expected_pool_address,
+      expected_pool_stake_credential,
+      pool_seed_asset_pair,
+      pool_asset_pair_data,
+      script_context
+    ) {
+      let assert_asset_pair_data =
+        validate_asset_pair_data(constr_tag_of, constr_fields_of);
+      let checked_pool_seed_asset_pair =
+        assert_asset_pair_data(pool_seed_asset_pair);
+      let assert_asset_pair_fields =
+        validate_asset_pair_data(constr_tag_of, constr_fields_of);
+      let checked_pool_asset_pair_data =
+        {
+        let asset_pair_bundle_tag =
+          constr_tag_of(pool_asset_pair_data);
+        assert(0 =i= asset_pair_bundle_tag);
+        let asset_pair_bundle_fields =
+          constr_fields_of(pool_asset_pair_data);
+        let [first_asset_pair, asset_pair_bundle_tail] =
+          asset_pair_bundle_fields;
+        let second_asset_pair =
+          list_first(asset_pair_bundle_tail);
+        !
+        (chooseList(
+          tailList(asset_pair_bundle_tail),
+          #
+          {
+            let checked_first_asset_pair =
+              assert_asset_pair_fields(first_asset_pair);
+            let checked_second_asset_pair =
+              assert_asset_pair_fields(second_asset_pair);
+            ()
+          },
+          #error
+        ))
+      };
+      !
+      (
+        if (
+        {
+          let script_context_fields =
+            constr_fields_of(script_context);
+          let [tx_info, script_context_tail] =
+            script_context_fields;
+          let script_purpose =
+            list_first(script_context_tail);
+          assert(1 =i= constr_tag_of(script_purpose));
+          let script_purpose_fields =
+            constr_fields_of(script_purpose);
+          let spending_input_ref =
+            list_first(script_purpose_fields);
+          let tx_info_fields =
+            constr_fields_of(tx_info);
+          let [tx_inputs << unListData, tx_info_after_inputs] =
+            tx_info_fields;
+          let tx_info_after_reference_inputs =
+            tailList(tx_info_after_inputs);
+          let [tx_outputs << unListData, tx_info_after_outputs] =
+            tx_info_after_reference_inputs;
+          let tx_info_after_fee =
+            tailList(tx_info_after_outputs);
+          let tx_mint_value =
+            list_first_map(tx_info_after_fee);
+          let pool_asset_pair_fields =
+            constr_fields_of(pool_asset_pair_data);
+          let [first_pool_asset_pair, pool_asset_pair_tail] =
+            pool_asset_pair_fields;
+          let second_pool_asset_pair =
+            list_first(pool_asset_pair_tail);
+          let pool_seed_asset_pair_fields =
+            constr_fields_of(pool_seed_asset_pair);
+          let [pool_seed_policy_id << unBData, pool_seed_asset_pair_tail] =
+            pool_seed_asset_pair_fields;
+          let pool_seed_token_name =
+            list_first_bytes(pool_seed_asset_pair_tail);
+          let first_asset_pair_fields =
+            constr_fields_of(first_pool_asset_pair);
+          let [first_asset_policy_id << unBData, first_asset_pair_tail] =
+            first_asset_pair_fields;
+          let first_asset_token_name =
+            list_first_bytes(first_asset_pair_tail);
+          let second_asset_pair_fields =
+            constr_fields_of(second_pool_asset_pair);
+          let [second_asset_policy_id << unBData, second_asset_pair_tail] =
+            second_asset_pair_fields;
+          let second_asset_token_name =
+            list_first_bytes(second_asset_pair_tail);
+          assert(
+          (
+            asset_pair_lex_before_projected_pair(constr_fields_of, second_pool_asset_pair)(
+              constr_fields_of(first_pool_asset_pair)
+            )
+          )
+          );
+          let pool_token_name_hash =
+            compute_lp_name(
+              first_asset_policy_id,
+              first_asset_token_name,
+              second_asset_policy_id,
+              second_asset_token_name
+            );
+          let own_input_option =
+            {
+            let find_spending_input =
+              find_input_by_ref(spending_input_ref);
+            find_spending_input(find_spending_input, tx_inputs)
+          };
+          assert(0 =i= constr_tag_of(own_input_option));
+          let own_input_option_fields =
+            constr_fields_of(own_input_option);
+          let own_input =
+            list_first(own_input_option_fields);
+          let own_input_fields =
+            constr_fields_of(own_input);
+          let own_input_after_ref =
+            tailList(own_input_fields);
+          let own_resolved_output =
+            list_first(own_input_after_ref);
+          let own_resolved_output_fields =
+            constr_fields_of(own_resolved_output);
+          let [own_resolved_address, own_resolved_output_after_address] =
+            own_resolved_output_fields;
+          let own_resolved_value =
+            list_first_map(own_resolved_output_after_address);
+          let own_resolved_address_fields =
+            constr_fields_of(own_resolved_address);
+          let own_spending_credential =
+            list_first(own_resolved_address_fields);
+          let filter_data_list =
+            filter_data_list_worker;
+          let inputs_at_own_credential =
+            filter_data_list(
+          tx_inputs,
+          input_at_own_credential(own_spending_credential)
+          );
+          !
+          (chooseList(
+          tailList(inputs_at_own_credential),
+          #
+          {
+            let compare_bytes_order =
+              compare_bytes_ordering;
+            let value_singleton =
+              make_singleton(compare_bytes_order);
+            let remove_policy_from_value =
+              drop_policy_entries;
+            let remove_ada_policy =
+              make_remove_ada(remove_policy_from_value);
+            assert(
+              mapData(remove_ada_policy(own_resolved_value)) =d=
+                mapData(value_singleton(factory_policy_id, 0x4d5346, 1))
+            );
+            let factory_continuation_outputs =
+              filter_data_list(
+            tx_outputs,
+            factory_continuation_output_matches(
+              constr_fields_of,
+              own_spending_credential,
+              remove_ada_policy,
+              value_singleton,
+              factory_policy_id
+            )
+            );
+            let [first_factory_output, remaining_factory_outputs] =
+              factory_continuation_outputs;
+            let second_factory_output =
+              list_first(remaining_factory_outputs);
+            !
+            (chooseList(
+            tailList(remaining_factory_outputs),
+            #
+            {
+              let first_factory_output_fields =
+                constr_fields_of(first_factory_output);
+              let first_factory_output_after_address =
+                tailList(first_factory_output_fields);
+              let first_factory_output_after_value =
+                tailList(first_factory_output_after_address);
+              let first_factory_output_datum =
+                list_first(first_factory_output_after_value);
+              let second_factory_output_fields =
+                constr_fields_of(second_factory_output);
+              let second_factory_output_after_address =
+                tailList(second_factory_output_fields);
+              let second_factory_output_after_value =
+                tailList(second_factory_output_after_address);
+              let second_factory_output_datum =
+                list_first(second_factory_output_after_value);
+              let unwrap_inline_datum =
+                make_unwrap_inline_datum(constr_tag_of);
+              let first_factory_pair_datum =
+                unwrap_inline_datum(first_factory_output_datum);
+              let checked_first_factory_pair =
+                assert_asset_pair_data(first_factory_pair_datum);
+              let second_factory_pair_datum =
+                unwrap_inline_datum(second_factory_output_datum);
+              let checked_second_factory_pair =
+                assert_asset_pair_data(second_factory_pair_datum);
+              let first_factory_pair_fields =
+                constr_fields_of(first_factory_pair_datum);
+              let [first_factory_pair_policy_id << unBData, first_factory_pair_tail] =
+                first_factory_pair_fields;
+              let first_factory_pair_token_name =
+                list_first_bytes(first_factory_pair_tail);
+              let second_factory_pair_fields =
+                constr_fields_of(second_factory_pair_datum);
+              let [second_factory_pair_policy_id << unBData, second_factory_pair_tail] =
+                second_factory_pair_fields;
+              let second_factory_pair_token_name =
+                list_first_bytes(second_factory_pair_tail);
+              assert(
+              (and {
+                first_factory_pair_policy_id <b< first_factory_pair_token_name,
+                second_factory_pair_policy_id <b< second_factory_pair_token_name,
+                first_factory_pair_policy_id =b= pool_seed_policy_id,
+                second_factory_pair_token_name =b= pool_seed_token_name,
+                pool_token_name_hash =b= first_factory_pair_token_name,
+                pool_token_name_hash =b= second_factory_pair_policy_id
+              })
+              );
+              let value_amount =
+                make_amount(constr_tag_of, constr_fields_of);
+              let pool_outputs =
+                filter_data_list(
+              tx_outputs,
+              pool_output_matches(
+                constr_fields_of,
+                constr_tag_of,
+                value_amount,
+                expected_pool_address,
+                factory_policy_id
+              )
+              );
+              let pool_output =
+                list_first(pool_outputs);
+              !
+              (chooseList(
+              tailList(pool_outputs),
+              #
+              {
+                let pool_output_fields =
+                  constr_fields_of(pool_output);
+                let pool_output_after_address =
+                  tailList(pool_output_fields);
+                let [pool_output_value << unMapData, pool_output_after_value] =
+                  pool_output_after_address;
+                let pool_output_raw_datum =
+                  list_first(pool_output_after_value);
+                let pool_out_datum =
+                  unwrap_inline_datum(pool_output_raw_datum);
+                let checked_pool_datum =
+                  {
+                  let pool_datum_tag =
+                    constr_tag_of(pool_out_datum);
+                  assert(0 =i= pool_datum_tag);
+                  let pool_datum_fields =
+                    constr_fields_of(pool_out_datum);
+                  let [
+                  pool_stake_credential,
+                  pool_datum_asset_a,
+                  pool_datum_asset_b,
+                  pool_datum_total_liquidity << unIData,
+                  pool_datum_reserve_a << unIData,
+                  pool_datum_reserve_b << unIData,
+                  pool_datum_base_fee_a_numerator << unIData,
+                  pool_datum_base_fee_b_numerator << unIData,
+                  pool_fee_sharing_option,
+                  after_pool_fee_sharing
+                  ] =
+                    pool_datum_fields;
+                  let pool_allows_dynamic_fee =
+                    1 =i= list_first_constr_tag(after_pool_fee_sharing);
+                  !
+                  (chooseList(
+                  tailList(after_pool_fee_sharing),
+                  #
+                  {
+                    let checked_pool_stake_credential =
+                      {
+                      let referenced_credential_tag =
+                        constr_tag_of(pool_stake_credential);
+                      !
+                      (
+                      0 =i= referenced_credential_tag
+                      ? #
+                      {
+                        let referenced_credential_fields =
+                          constr_fields_of(pool_stake_credential);
+                        let inline_stake_credential =
+                          list_first(referenced_credential_fields);
+                        !
+                        (chooseList(
+                        tailList(referenced_credential_fields),
+                        #
+                        {
+                          let checked_inline_stake_credential =
+                            {
+                            let stake_credential_tag =
+                              constr_tag_of(inline_stake_credential);
+                            !
+                            (
+                            0 =i= stake_credential_tag
+                            ? #
+                            {
+                              let stake_credential_fields =
+                                constr_fields_of(inline_stake_credential);
+                              let stake_credential_hash =
+                                list_first_bytes(stake_credential_fields);
+                              !
+                              (chooseList(
+                              tailList(stake_credential_fields),
+                              #(),
+                              #error
+                              ))
+                            }
+                            : #
+                            {
+                              assert(1 =i= stake_credential_tag);
+                              let stake_credential_fields =
+                                constr_fields_of(inline_stake_credential);
+                              let stake_credential_hash =
+                                list_first_bytes(stake_credential_fields);
+                              !
+                              (chooseList(
+                              tailList(stake_credential_fields),
+                              #(),
+                              #error
+                              ))
+                            }
+                            )
+                          };
+                          ()
+                        },
+                        #error
+                        ))
+                      }
+                      : #
+                      {
+                        assert(1 =i= referenced_credential_tag);
+                        let pointer_fields =
+                          constr_fields_of(pool_stake_credential);
+                        let [
+                        pointer_slot_number << unIData,
+                        pointer_transaction_index << unIData,
+                        pointer_after_transaction
+                        ] =
+                          pointer_fields;
+                        let pointer_certificate_index =
+                          list_first_int(pointer_after_transaction);
+                        !
+                        (chooseList(tailList(pointer_after_transaction), #(), #error))
+                      }
+                      )
+                    };
+                    let checked_pool_datum_asset_a =
+                      assert_asset_pair_fields(pool_datum_asset_a);
+                    let checked_pool_datum_asset_b =
+                      assert_asset_pair_fields(pool_datum_asset_b);
+                    let checked_fee_sharing_option =
+                      {
+                      let fee_sharing_option_tag =
+                        constr_tag_of(pool_fee_sharing_option);
+                      !
+                      (
+                      0 =i= fee_sharing_option_tag
+                      ? #
+                      {
+                        let fee_sharing_fields =
+                          constr_fields_of(pool_fee_sharing_option);
+                        let fee_sharing_numerator =
+                          list_first_int(fee_sharing_fields);
+                        !
+                        (chooseList(tailList(fee_sharing_fields), #(), #error))
+                      }
+                      : #
+                      {
+                        assert(1 =i= fee_sharing_option_tag);
+                        !
+                        (chooseList(constr_fields_of(pool_fee_sharing_option), #(), #error))
+                      }
+                      )
+                    };
+                    ()
+                  },
+                  #error
+                  ))
+                };
+                let pool_datum_fields =
+                  constr_fields_of(pool_out_datum);
+                let [
+                pool_stake_credential,
+                pool_datum_asset_a,
+                pool_datum_asset_b,
+                pool_datum_total_liquidity << unIData,
+                pool_datum_reserve_a << unIData,
+                pool_datum_reserve_b << unIData,
+                pool_datum_base_fee_a_numerator << unIData,
+                pool_datum_base_fee_b_numerator << unIData,
+                pool_fee_sharing_option,
+                after_pool_fee_sharing
+                ] =
+                  pool_datum_fields;
+                let pool_allows_dynamic_fee =
+                  1 =i= list_first_constr_tag(after_pool_fee_sharing);
+                let estimated_amount_a =
+                  value_amount(pool_output_value, first_asset_policy_id, first_asset_token_name);
+                let amount_a =
+                  !(
+                and { first_asset_policy_id =b= 0x, first_asset_token_name =b= 0x }
+                ? #(estimated_amount_a - 4500000)
+                : #estimated_amount_a
+                );
+                let amount_b =
+                  value_amount(pool_output_value, second_asset_policy_id, second_asset_token_name);
+                let total_liquidity =
+                  {
+                  let liquidity_product = amount_a * amount_b;
+                  let sqrt_floor =
+                    !
+                  (
+                  liquidity_product < 0
+                  ? #error
+                  : #!
+                  (
+                  liquidity_product =i= 0
+                  ? #0
+                  : #!
+                  (
+                  liquidity_product =i= 1
+                  ? #1
+                  : #!
+                  (
+                  liquidity_product =i= 2
+                  ? #1
+                  : #
+                  {
+                    let sqrt_seed = liquidity_product / 2 + 1;
+                    let sqrt_iter =
+                      integer_sqrt_iter(liquidity_product);
+                    sqrt_iter(sqrt_iter, liquidity_product, sqrt_seed)
+                  }
+                  )
+                  )
+                  )
+                  );
+                  !(sqrt_floor * sqrt_floor < liquidity_product ? #(sqrt_floor + 1) : #sqrt_floor)
+                };
+                let remaining_liquidity = 9223372036854775807 - (total_liquidity - 10);
+                let value_add =
+                  make_add(constr_tag_of, constr_fields_of, compare_bytes_order);
+                let expected_pool_output_value =
+                  value_add(
+                value_add(
+                value_add(
+                value_add(
+                value_add(list<pair<data, data>>[], 0x, 0x, 4500000),
+                first_asset_policy_id,
+                first_asset_token_name,
+                amount_a
+                ),
+                second_asset_policy_id,
+                second_asset_token_name,
+                amount_b
+                ),
+                factory_policy_id,
+                pool_token_name_hash,
+                remaining_liquidity
+                ),
+                factory_policy_id,
+                0x4d5350,
+                1
+                );
+                and {
+                  pool_stake_credential =d= expected_pool_stake_credential,
+                  pool_datum_asset_a =d= first_pool_asset_pair,
+                  pool_datum_asset_b =d= second_pool_asset_pair,
+                  pool_datum_total_liquidity =i= total_liquidity,
+                  pool_datum_reserve_a =i= amount_a,
+                  pool_datum_reserve_b =i= amount_b,
+                  0 < amount_a,
+                  0 < amount_b,
+                  10 < total_liquidity,
+                  pool_datum_base_fee_a_numerator =i= pool_datum_base_fee_b_numerator,
+                  (and { pool_datum_base_fee_a_numerator <= 2000, 5 <= pool_datum_base_fee_a_numerator }),
+                  !(pool_allows_dynamic_fee ? #False : #(False ? False : True)),
+                  pool_fee_sharing_option =d= data(constr 1 []),
+                  (
+                  (mapData(remove_policy_from_value(tx_mint_value, 0x)))
+                  =d=
+                    (mapData(
+                  value_add(
+                  value_add(
+                  value_add(list<pair<data, data>>[], factory_policy_id, 0x4d5346, 1),
+                  factory_policy_id,
+                  0x4d5350,
+                  1
+                  ),
+                  factory_policy_id,
+                  pool_token_name_hash,
+                  9223372036854775807
+                  )
+                  ))
+                  ),
+                  mapData(expected_pool_output_value) =d= mapData(pool_output_value),
+                }
+              },
+              #error
+              ))
+            },
+            #error
+            ))
+          },
+          #error
+          ))
+        }
+        ) {
+          #()
+        } else {
+          #
+          proc {
+            !error;
+            error
+          }
+        }
+      )
+    }
+  }
+}

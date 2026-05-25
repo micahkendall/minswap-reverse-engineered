@@ -1,0 +1,501 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/batch_swap_helpers";
+
+@captures 2;
+fn oco_amount_predicate_template(minimum_amount, maximum_amount, observed_amount) {
+  or { minimum_amount <= observed_amount, observed_amount <= maximum_amount }
+}
+
+@captures 1;
+fn step_minimum_amount_predicate_template(minimum_amount, observed_amount) {
+  minimum_amount <= observed_amount
+}
+
+@captures 1;
+fn step_maximum_amount_predicate_template(maximum_amount, observed_amount) {
+  observed_amount <= maximum_amount
+}
+
+@captures 6;
+fn success_output_matches_receiver(constr_fields_of, constr_tag_of, matches_datum_reference, step_output_data, success_receiver_address,
+  success_receiver_datum_choice) {
+  let step_output_fields =
+    constr_fields_of(step_output_data);
+  let [step_output_address, after_step_output_address] =
+    step_output_fields;
+  let after_step_output_value =
+    tailList(after_step_output_address);
+  let step_output_datum_reference =
+    list_first(after_step_output_value);
+  let success_receiver_fields =
+    constr_fields_of(success_receiver_address);
+  let success_receiver_credential =
+    list_first(success_receiver_fields);
+  let success_receiver_credential_tag =
+    constr_tag_of(success_receiver_credential);
+  !
+    (
+      if (0 =i= success_receiver_credential_tag) {
+        #success_receiver_address =d= step_output_address
+      } else {
+        #
+          (and { success_receiver_address =d= step_output_address, matches_datum_reference(
+            step_output_datum_reference, success_receiver_datum_choice) })
+      }
+    )
+}
+
+@captures 1;
+fn output_value_with_ada_only(ada_amount) {
+  constrData(
+    0,
+    mkCons(
+      mapData(
+        mkCons(
+          mkPairData(
+            data(bytes 0x),
+            mapData(mkCons(mkPairData(data(bytes 0x), iData(ada_amount)), list<pair<data, data>>[]))
+          ),
+          list<pair<data, data>>[]
+        )
+      ),
+      list<data>[]
+    )
+  )
+}
+
+@captures 4;
+fn output_value_with_ada_and_asset(ada_amount, asset_policy_id, asset_name, asset_amount) {
+  constrData(
+    0,
+    mkCons(
+      mapData(
+        mkCons(
+          mkPairData(
+            data(bytes 0x),
+            mapData(mkCons(mkPairData(data(bytes 0x), iData(ada_amount)), list<pair<data, data>>[]))
+          ),
+          mkCons(
+            mkPairData(
+              bData(asset_policy_id),
+              mapData(mkCons(mkPairData(bData(asset_name), iData(asset_amount)), list<pair<data, data>>[]))
+            ),
+            list<pair<data, data>>[]
+          )
+        )
+      ),
+      list<data>[]
+    )
+  )
+}
+
+@captures 7;
+fn ada_special_case_output_value(is_ada_asset, copy_data_pair_list, order_input_value, swap_a_to_b, order_batcher_fee, swap_input_amount,
+  swap_output_amount, asset_a_policy_id, asset_a_name, asset_b_policy_id, asset_b_name) {
+  !
+    (
+      if (is_ada_asset(asset_a_policy_id, asset_a_name)) {
+        # {
+          let copied_order_value =
+            copy_data_pair_list(order_input_value);
+          let [ada_policy_entry, after_ada_policy_entry] =
+            copied_order_value;
+          let order_ada_amount =
+            unIData(sndPair(list_first(unMapData(sndPair(ada_policy_entry)))));
+          !
+            (chooseList(
+              after_ada_policy_entry,
+              #!(
+                if (swap_a_to_b) {
+                  #output_value_with_ada_and_asset(
+                    order_ada_amount - (order_batcher_fee + swap_input_amount),
+                    asset_b_policy_id,
+                    asset_b_name,
+                    swap_output_amount
+                  )
+                } else {
+                  #error
+                }
+              ),
+              # {
+                let after_non_ada_policy =
+                  tailList(after_ada_policy_entry);
+                let no_ada_special_case = #data(constr 1 []);
+                !
+                  (chooseList(
+                    after_non_ada_policy,
+                    # {
+                      let non_ada_policy_entry =
+                        list_first(after_ada_policy_entry);
+                      let non_ada_asset_entries =
+                        unMapData(sndPair(non_ada_policy_entry));
+                      let non_ada_policy_id =
+                        unBData(fstPair(non_ada_policy_entry));
+                      !
+                        (chooseList(
+                          non_ada_asset_entries,
+                          no_ada_special_case,
+                          # {
+                            let after_non_ada_asset =
+                              tailList(non_ada_asset_entries);
+                            !
+                              (chooseList(
+                                after_non_ada_asset,
+                                # {
+                                  let non_ada_asset_entry =
+                                    list_first(non_ada_asset_entries);
+                                  let non_ada_asset_amount =
+                                    unIData(sndPair(non_ada_asset_entry));
+                                  let non_ada_asset_name =
+                                    unBData(fstPair(non_ada_asset_entry));
+                                  !
+                                    (
+                                      if (and { (and { if (swap_a_to_b) { False }
+                                          else { True }, non_ada_policy_id =b=
+                                            asset_b_policy_id }), non_ada_asset_name
+                                        =b= asset_b_name }) {
+                                        #
+                                          !
+                                            (
+                                              if (swap_input_amount <
+                                                non_ada_asset_amount) {
+                                                #
+                                                  (output_value_with_ada_and_asset(
+                                                    order_ada_amount - order_batcher_fee + swap_output_amount,
+                                                    non_ada_policy_id,
+                                                    non_ada_asset_name,
+                                                    non_ada_asset_amount - swap_input_amount
+                                                  ))
+                                              } else {
+                                                # {
+                                                  assert(
+                                                    (
+                                                      non_ada_asset_amount
+                                                      =i=
+                                                      swap_input_amount
+                                                    )
+                                                  );
+                                                  output_value_with_ada_only(order_ada_amount - order_batcher_fee + swap_output_amount)
+                                                }
+                                              }
+                                            )
+                                      } else {
+                                        #data(constr 1 [])
+                                      }
+                                    )
+                                },
+                                no_ada_special_case
+                              ))
+                          }
+                        ))
+                    },
+                    no_ada_special_case
+                  ))
+              }
+            ))
+        }
+      } else {
+        #data(constr 1 [])
+      }
+    )
+}
+
+@captures 12;
+fn normal_output_value_matches_swap(constr_fields_of, first_field_from_fields, second_field_from_fields, adjust_value_for_pair_delta,
+  order_input_value, order_batcher_fee, step_output_value_map, swap_a_to_b, pool_asset_a, pool_asset_b, swap_input_amount, swap_output_amount) {
+  let ordered_pool_asset_pair =
+    !
+  (
+  if (swap_a_to_b) {
+    #
+    (mkPairData(pool_asset_a, pool_asset_b))
+  } else {
+    #
+    (mkPairData(pool_asset_b, pool_asset_a))
+  }
+  );
+  let input_pool_asset =
+    fstPair(ordered_pool_asset_pair);
+  let output_pool_asset =
+    sndPair(ordered_pool_asset_pair);
+  let input_pool_asset_fields =
+    constr_fields_of(input_pool_asset);
+  let [input_pool_policy_id << unBData, after_input_pool_policy_id] =
+    input_pool_asset_fields;
+  let input_pool_asset_name =
+    list_first_bytes(after_input_pool_policy_id);
+  let output_pool_asset_fields =
+    constr_fields_of(output_pool_asset);
+  (
+  mapData(step_output_value_map)
+  =d=
+    (mapData(
+  adjust_value_for_pair_delta(order_input_value, order_batcher_fee,
+  input_pool_policy_id, input_pool_asset_name, list_first_bytes(output_pool_asset_fields), unBData(list_second(output_pool_asset_fields)),
+    swap_input_amount, swap_output_amount)
+  ))
+  )
+  }
+
+@captures 15;
+fn success_output_value_matches_swap(constr_fields_of, constr_tag_of, second_field_from_fields, is_ada_asset, copy_data_pair_list,
+  first_field_from_fields, adjust_value_for_pair_delta, order_input_value, step_output_data, swap_a_to_b, pool_asset_a, pool_asset_b,
+  order_batcher_fee, swap_input_amount, swap_output_amount) {
+  let step_output_value_map =
+    unMapData(second_field_from_fields(constr_fields_of(step_output_data)));
+  let ada_special_case_option =
+    ada_special_case_output_value(
+    is_ada_asset,
+    copy_data_pair_list,
+    order_input_value,
+    swap_a_to_b,
+    order_batcher_fee,
+    swap_input_amount,
+    swap_output_amount,
+    unBData(first_field_from_fields(constr_fields_of(pool_asset_a))),
+    unBData(second_field_from_fields(constr_fields_of(pool_asset_a))),
+    unBData(first_field_from_fields(constr_fields_of(pool_asset_b))),
+    unBData(second_field_from_fields(constr_fields_of(pool_asset_b)))
+    );
+  let ada_special_case_tag =
+    constr_tag_of(ada_special_case_option);
+  !
+  (
+  if (0 =i= ada_special_case_tag) {
+    #
+    (list_first(constr_fields_of(ada_special_case_option)) =d= mapData(copy_data_pair_list(
+    step_output_value_map)))
+  } else {
+    #
+    normal_output_value_matches_swap(
+      constr_fields_of,
+      first_field_from_fields,
+      second_field_from_fields,
+      adjust_value_for_pair_delta,
+      order_input_value,
+      order_batcher_fee,
+      step_output_value_map,
+      swap_a_to_b,
+      pool_asset_a,
+      pool_asset_b,
+      swap_input_amount,
+      swap_output_amount
+    )
+  }
+  )
+  }
+
+@captures 10;
+fn pool_snapshot_after_successful_swap(pool_snapshot_from_values, swap_a_to_b, swap_input_amount, swap_output_amount, swap_fee_sharing_amount,
+  pool_datum_reserve_a, pool_datum_reserve_b, pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity) {
+  !
+  (
+  if (swap_a_to_b) {
+    #
+    pool_snapshot_from_values(
+    pool_datum_reserve_a + swap_input_amount - swap_fee_sharing_amount,
+    pool_datum_reserve_b - swap_output_amount,
+    pool_value_reserve_a + swap_input_amount,
+    pool_value_reserve_b - swap_output_amount,
+    pool_total_liquidity
+    )
+  } else {
+    #
+    pool_snapshot_from_values(
+    pool_datum_reserve_a - swap_output_amount,
+    pool_datum_reserve_b + swap_input_amount - swap_fee_sharing_amount,
+    pool_value_reserve_a - swap_output_amount,
+    pool_value_reserve_b + swap_input_amount,
+    pool_total_liquidity
+    )
+  }
+  )
+}
+
+@captures 25;
+fn apply_successful_swap_step(constr_fields_of, constr_tag_of, matches_datum_reference, second_field_from_fields, is_ada_asset, copy_data_pair_list,
+  first_field_from_fields, adjust_value_for_pair_delta, pool_snapshot_from_values, order_input_value, step_output_data, success_receiver_address,
+  success_receiver_datum_choice, swap_a_to_b, pool_asset_a, pool_asset_b, order_batcher_fee, swap_input_amount, swap_output_amount,
+  swap_fee_sharing_amount, pool_datum_reserve_a, pool_datum_reserve_b, pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity) {
+  assert(
+  (
+  and {
+    success_output_matches_receiver(
+      constr_fields_of,
+      constr_tag_of,
+      matches_datum_reference,
+      step_output_data,
+      success_receiver_address,
+      success_receiver_datum_choice
+    ),
+    success_output_value_matches_swap(
+      constr_fields_of,
+      constr_tag_of,
+      second_field_from_fields,
+      is_ada_asset,
+      copy_data_pair_list,
+      first_field_from_fields,
+      adjust_value_for_pair_delta,
+      order_input_value,
+      step_output_data,
+      swap_a_to_b,
+      pool_asset_a,
+      pool_asset_b,
+      order_batcher_fee,
+      swap_input_amount,
+      swap_output_amount
+    ),
+  }
+  )
+  );
+  pool_snapshot_after_successful_swap(
+    pool_snapshot_from_values,
+    swap_a_to_b,
+    swap_input_amount,
+    swap_output_amount,
+    swap_fee_sharing_amount,
+    pool_datum_reserve_a,
+    pool_datum_reserve_b,
+    pool_value_reserve_a,
+    pool_value_reserve_b,
+    pool_total_liquidity
+  )
+}
+
+@captures 7;
+fn swap_direction_context_from_pool(swap_a_to_b, pool_asset_a, pool_asset_b, pool_datum_reserve_a, pool_datum_reserve_b,
+  base_fee_a_numerator, base_fee_b_numerator) {
+  !
+    (
+      if (swap_a_to_b) {
+        #
+          (mkCons(
+            pool_asset_a,
+            mkCons(iData(pool_datum_reserve_a), mkCons(iData(pool_datum_reserve_b), mkCons(iData(
+              base_fee_a_numerator), list<data>[])))
+          ))
+      } else {
+        #
+          (mkCons(
+            pool_asset_b,
+            mkCons(iData(pool_datum_reserve_b), mkCons(iData(pool_datum_reserve_a), mkCons(iData(
+              base_fee_b_numerator), list<data>[])))
+          ))
+      }
+    )
+}
+
+@captures 13;
+fn apply_swap_step_template(constr_fields_of, constr_tag_of, value_token_amount, constant_product_swap_out, scaled_amount_from_option,
+  matches_datum_reference, second_field_from_fields, is_ada_asset, copy_data_pair_list, first_field_from_fields, adjust_value_for_pair_delta,
+  matches_output_address_value_datum, subtract_ada_amount, order_input_value, step_output_data, refund_receiver_address, refund_receiver_datum_choice,
+  success_receiver_address, success_receiver_datum_choice, swap_a_to_b, input_amount_option_data, pool_asset_a, pool_asset_b, order_batcher_fee,
+  base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+  current_pool_snapshot, allow_refund_on_failure, output_amount_predicate) {
+  let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+    current_pool_snapshot;
+  let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+    after_pool_datum_reserve_a;
+  let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+    after_pool_datum_reserve_b;
+  let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+    after_pool_value_reserve_a;
+  let pool_total_liquidity =
+    list_first_int(after_pool_value_reserve_b);
+  let swap_direction_context =
+    swap_direction_context_from_pool(
+      swap_a_to_b,
+      pool_asset_a,
+      pool_asset_b,
+      pool_datum_reserve_a,
+      pool_datum_reserve_b,
+      base_fee_a_numerator,
+      base_fee_b_numerator
+    );
+  let [swap_input_asset_data, after_swap_input_asset_data] =
+    swap_direction_context;
+  let [swap_input_datum_reserve << unIData, after_swap_input_datum_reserve] =
+    after_swap_input_asset_data;
+  let [swap_output_datum_reserve << unIData, after_swap_output_datum_reserve] =
+    after_swap_input_datum_reserve;
+  let swap_input_base_fee_numerator =
+    list_first_int(after_swap_output_datum_reserve);
+  let swap_input_asset_fields =
+    constr_fields_of(swap_input_asset_data);
+  let [swap_input_asset_policy_id << unBData, after_swap_input_asset_policy_id] =
+    swap_input_asset_fields;
+  let swap_input_asset_name =
+    list_first_bytes(after_swap_input_asset_policy_id);
+  let swap_input_amount =
+    {
+    let swap_input_amount_option_tag =
+      constr_tag_of(input_amount_option_data);
+    !
+    (
+      if (0 =i= swap_input_amount_option_tag) {
+        #
+        list_first_int(constr_fields_of(input_amount_option_data))
+      } else {
+        #
+        {
+          let swap_input_amount_option_fields =
+            constr_fields_of(input_amount_option_data);
+          let swap_input_excluded_amount =
+            list_first_int(swap_input_amount_option_fields);
+          assert(0 <= swap_input_excluded_amount);
+          value_token_amount(order_input_value, swap_input_asset_policy_id, swap_input_asset_name) -
+          swap_input_excluded_amount
+        }
+      }
+    )
+  };
+  assert(0 < swap_input_amount);
+  let swap_output_amount =
+    constant_product_swap_out(swap_input_datum_reserve, swap_output_datum_reserve, swap_input_amount,
+    swap_input_base_fee_numerator);
+  let swap_fee_sharing_amount =
+    scaled_amount_from_option(swap_input_amount, swap_input_base_fee_numerator, fee_sharing_option);
+  let swap_output_satisfies_order =
+    output_amount_predicate(swap_output_amount);
+  !
+  (
+    if (swap_output_satisfies_order) {
+      #
+      apply_successful_swap_step(
+        constr_fields_of,
+        constr_tag_of,
+        matches_datum_reference,
+        second_field_from_fields,
+        is_ada_asset,
+        copy_data_pair_list,
+        first_field_from_fields,
+        adjust_value_for_pair_delta,
+        pool_snapshot_from_values,
+        order_input_value,
+        step_output_data,
+        success_receiver_address,
+        success_receiver_datum_choice,
+        swap_a_to_b,
+        pool_asset_a,
+        pool_asset_b,
+        order_batcher_fee,
+        swap_input_amount,
+        swap_output_amount,
+        swap_fee_sharing_amount,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        pool_value_reserve_a,
+        pool_value_reserve_b,
+        pool_total_liquidity
+      )
+    } else {
+      #
+      {
+        assert(and { allow_refund_on_failure, matches_output_address_value_datum(refund_receiver_address,
+          refund_receiver_datum_choice, subtract_ada_amount(order_input_value, order_batcher_fee),
+          step_output_data) });
+        current_pool_snapshot
+      }
+    }
+  )
+}

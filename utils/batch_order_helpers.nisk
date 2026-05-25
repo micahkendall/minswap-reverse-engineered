@@ -1,0 +1,2672 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/batch_order_helpers";
+
+@captures 7;
+fn asset_direction_context(a_to_b, asset_a, asset_b, reserve_a, reserve_b, fee_a_numerator, fee_b_numerator) {
+  !
+    (
+      if (a_to_b) {
+        #
+          (mkCons(asset_a, mkCons(asset_b, mkCons(iData(reserve_a), mkCons(iData(reserve_b), mkCons(iData(fee_a_numerator), list<data>[]))))))
+      } else {
+        #
+          (mkCons(asset_b, mkCons(asset_a, mkCons(iData(reserve_b), mkCons(iData(reserve_a), mkCons(iData(fee_b_numerator), list<data>[]))))))
+      }
+    )
+}
+
+@captures 2;
+fn step_result_pair(next_pool_snapshot, remaining_outputs) {
+  mkPairData(listData(next_pool_snapshot), listData(remaining_outputs))
+}
+
+@captures 17;
+fn apply_swap_exact_in_step(constr_fields_of, list_first_constr_tag, apply_swap_step, order_step_data, outputs_remaining, order_input_value,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data, pool_asset_a,
+  pool_asset_b, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step) {
+  let swap_exact_in_step_fields =
+    constr_fields_of(order_step_data);
+  let swap_exact_in_a_to_b =
+    1 =i= list_first_constr_tag(swap_exact_in_step_fields);
+  let swap_exact_in_after_direction =
+    tailList(swap_exact_in_step_fields);
+  let [swap_exact_in_amount_option_data, swap_exact_in_after_amount_option] =
+    swap_exact_in_after_direction;
+  let [swap_exact_in_minimum_receive << unIData, swap_exact_in_after_minimum_receive] =
+    swap_exact_in_after_amount_option;
+  let swap_exact_in_killable =
+    1 =i= list_first_constr_tag(swap_exact_in_after_minimum_receive);
+  let [step_output_data, outputs_after_step] = outputs_remaining;
+  assert(0 < swap_exact_in_minimum_receive);
+  step_result_pair(
+  apply_swap_step(
+  order_input_value,
+  step_output_data,
+  refund_receiver_asset_data,
+  refund_receiver_datum_choice_data,
+  success_receiver_asset_data,
+  success_receiver_datum_choice_data,
+  swap_exact_in_a_to_b,
+  swap_exact_in_amount_option_data,
+  pool_asset_a,
+  pool_asset_b,
+  order_batcher_fee,
+  base_fee_a_numerator,
+  base_fee_b_numerator,
+  fee_sharing_option,
+  pool_snapshot_before_step,
+  swap_exact_in_killable,
+  step_minimum_amount_predicate_template(swap_exact_in_minimum_receive)
+  ),
+  outputs_after_step
+  )
+}
+
+@captures 17;
+fn apply_stop_loss_step(constr_fields_of, list_first_constr_tag, apply_swap_step, order_step_data, outputs_remaining, order_input_value,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data, pool_asset_a,
+  pool_asset_b, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step) {
+  let stop_loss_step_fields =
+    constr_fields_of(order_step_data);
+  let stop_loss_a_to_b =
+    1 =i= list_first_constr_tag(stop_loss_step_fields);
+  let stop_loss_after_direction =
+    tailList(stop_loss_step_fields);
+  let [stop_loss_amount_option_data, stop_loss_after_amount_option] =
+    stop_loss_after_direction;
+  let stop_loss_receive =
+    list_first_int(stop_loss_after_amount_option);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(0 < stop_loss_receive);
+  step_result_pair(
+  apply_swap_step(
+  order_input_value,
+  step_output_data,
+  refund_receiver_asset_data,
+  refund_receiver_datum_choice_data,
+  success_receiver_asset_data,
+  success_receiver_datum_choice_data,
+  stop_loss_a_to_b,
+  stop_loss_amount_option_data,
+  pool_asset_a,
+  pool_asset_b,
+  order_batcher_fee,
+  base_fee_a_numerator,
+  base_fee_b_numerator,
+  fee_sharing_option,
+  pool_snapshot_before_step,
+  False,
+  step_maximum_amount_predicate_template(stop_loss_receive)
+  ),
+  outputs_after_step
+  )
+}
+
+@captures 17;
+fn apply_oco_step(constr_fields_of, list_first_constr_tag, apply_swap_step, order_step_data, outputs_remaining, order_input_value,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data, pool_asset_a,
+  pool_asset_b, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step) {
+  let oco_step_fields =
+    constr_fields_of(order_step_data);
+  let oco_a_to_b =
+    1 =i= list_first_constr_tag(oco_step_fields);
+  let oco_after_direction =
+    tailList(oco_step_fields);
+  let [oco_amount_option_data, oco_after_amount_option] =
+    oco_after_direction;
+  let [oco_minimum_receive << unIData, oco_after_minimum_receive] =
+    oco_after_amount_option;
+  let oco_stop_loss_receive =
+    list_first_int(oco_after_minimum_receive);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(and { 0 < oco_minimum_receive, 0 < oco_stop_loss_receive });
+  step_result_pair(
+  apply_swap_step(
+  order_input_value,
+  step_output_data,
+  refund_receiver_asset_data,
+  refund_receiver_datum_choice_data,
+  success_receiver_asset_data,
+  success_receiver_datum_choice_data,
+  oco_a_to_b,
+  oco_amount_option_data,
+  pool_asset_a,
+  pool_asset_b,
+  order_batcher_fee,
+  base_fee_a_numerator,
+  base_fee_b_numerator,
+  fee_sharing_option,
+  pool_snapshot_before_step,
+  False,
+  oco_amount_predicate_template(oco_minimum_receive,
+  oco_stop_loss_receive)
+  ),
+  outputs_after_step
+  )
+}
+
+@captures 27;
+fn swap_exact_out_result_snapshot(
+  adjust_value_for_pair_delta, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  swap_exact_out_required_input_amount, swap_exact_out_available_input_amount, swap_exact_out_killable, swap_exact_out_a_to_b,
+  order_input_value, order_batcher_fee, swap_input_asset_policy_id, swap_input_asset_name,
+  swap_output_asset_policy_id, swap_output_asset_name, swap_exact_out_expected_receive, swap_fee_sharing_amount,
+  success_receiver_asset_data, success_receiver_datum_choice_data, refund_receiver_asset_data, refund_receiver_datum_choice_data,
+  step_output_data, pool_datum_reserve_a, pool_datum_reserve_b, pool_value_reserve_a,
+  pool_value_reserve_b, pool_total_liquidity, pool_snapshot_before_step
+) {
+  let swap_exact_out_succeeds = swap_exact_out_required_input_amount <=
+    swap_exact_out_available_input_amount;
+  !
+  (
+  if (swap_exact_out_succeeds) {
+    #
+    {
+      let expected_step_output_value =
+        adjust_value_for_pair_delta(
+      order_input_value,
+      order_batcher_fee,
+      swap_input_asset_policy_id,
+      swap_input_asset_name,
+      swap_output_asset_policy_id,
+      swap_output_asset_name,
+      swap_exact_out_required_input_amount,
+      swap_exact_out_expected_receive
+      );
+      assert(
+      (matches_output_address_value_datum(
+      success_receiver_asset_data,
+      success_receiver_datum_choice_data,
+      expected_step_output_value,
+      step_output_data
+      ))
+      );
+      !
+      (
+      if (swap_exact_out_a_to_b) {
+        #
+        pool_snapshot_from_values(
+        pool_datum_reserve_a +
+        swap_exact_out_required_input_amount -
+        swap_fee_sharing_amount,
+        pool_datum_reserve_b -
+        swap_exact_out_expected_receive,
+        pool_value_reserve_a +
+        swap_exact_out_required_input_amount,
+        pool_value_reserve_b -
+        swap_exact_out_expected_receive,
+        pool_total_liquidity
+        )
+      } else {
+        #
+        pool_snapshot_from_values(
+        pool_datum_reserve_a -
+        swap_exact_out_expected_receive,
+        pool_datum_reserve_b +
+        swap_exact_out_required_input_amount -
+        swap_fee_sharing_amount,
+        pool_value_reserve_a -
+        swap_exact_out_expected_receive,
+        pool_value_reserve_b +
+        swap_exact_out_required_input_amount,
+        pool_total_liquidity
+        )
+      }
+      )
+    }
+  } else {
+    #
+    {
+      assert(
+      (
+      and {
+        swap_exact_out_killable,
+        matches_output_address_value_datum(
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        subtract_ada_amount(order_input_value,
+        order_batcher_fee),
+        step_output_data
+        ),
+      }
+      )
+      );
+      pool_snapshot_before_step
+    }
+  }
+  )
+}
+
+@captures 4;
+fn required_swap_exact_out_input(input_reserve, output_reserve, expected_receive, input_base_fee_numerator) {
+  !
+    (
+      if (expected_receive < output_reserve) {
+        #(input_reserve * expected_receive * 10000 /
+          ((output_reserve - expected_receive) * (10000 - input_base_fee_numerator)) + 1)
+      } else {
+        #error
+      }
+    )
+}
+
+@captures 2;
+fn positive_deposit_amounts(deposit_amount_a, deposit_amount_b) {
+  and {
+    0 <= deposit_amount_a,
+    0 <= deposit_amount_b,
+    0 < deposit_amount_a + deposit_amount_b,
+  }
+}
+
+@captures 23;
+fn apply_swap_exact_out_step(constr_fields_of, list_first_constr_tag, asset_direction_context, scaled_amount_from_option, value_token_amount,
+  adjust_value_for_pair_delta, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values, order_step_data, outputs_remaining,
+  pool_snapshot_before_step, pool_asset_a, pool_asset_b, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, order_input_value,
+  order_batcher_fee, refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data) {
+  let swap_exact_out_step_fields =
+    constr_fields_of(order_step_data);
+  let swap_exact_out_a_to_b =
+    1 =i= list_first_constr_tag(swap_exact_out_step_fields);
+  let swap_exact_out_after_direction =
+    tailList(swap_exact_out_step_fields);
+  let [swap_exact_out_max_amount_option_data, swap_exact_out_after_amount_option] =
+    swap_exact_out_after_direction;
+  let [swap_exact_out_expected_receive << unIData, swap_exact_out_after_expected_receive] =
+    swap_exact_out_after_amount_option;
+  let swap_exact_out_killable =
+    1 =i= list_first_constr_tag(swap_exact_out_after_expected_receive);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(0 < swap_exact_out_expected_receive);
+  step_result_pair(
+    {
+      let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+        pool_snapshot_before_step;
+      let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+        after_pool_datum_reserve_a;
+      let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+        after_pool_datum_reserve_b;
+      let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+        after_pool_value_reserve_a;
+      let pool_total_liquidity =
+        list_first_int(after_pool_value_reserve_b);
+      let swap_exact_out_direction_context =
+        asset_direction_context(
+          swap_exact_out_a_to_b, pool_asset_a, pool_asset_b, pool_datum_reserve_a,
+          pool_datum_reserve_b, base_fee_a_numerator, base_fee_b_numerator
+        );
+      let [swap_input_asset_data, after_swap_input_asset_data] =
+        swap_exact_out_direction_context;
+      let [swap_output_asset_data, after_swap_output_asset_data] =
+        after_swap_input_asset_data;
+      let [swap_input_datum_reserve << unIData, after_swap_input_datum_reserve] =
+        after_swap_output_asset_data;
+      let [swap_output_datum_reserve << unIData, after_swap_output_datum_reserve] =
+        after_swap_input_datum_reserve;
+      let swap_input_base_fee_numerator =
+        list_first_int(after_swap_output_datum_reserve);
+      let swap_input_asset_fields =
+        constr_fields_of(swap_input_asset_data);
+      let [swap_input_asset_policy_id << unBData, after_swap_input_asset_policy_id] =
+        swap_input_asset_fields;
+      let swap_input_asset_name =
+        list_first_bytes(after_swap_input_asset_policy_id);
+      let swap_output_asset_fields =
+        constr_fields_of(swap_output_asset_data);
+      let [swap_output_asset_policy_id << unBData, after_swap_output_asset_policy_id] =
+        swap_output_asset_fields;
+      let swap_output_asset_name =
+        list_first_bytes(after_swap_output_asset_policy_id);
+      let swap_exact_out_required_input_amount =
+        required_swap_exact_out_input(swap_input_datum_reserve, swap_output_datum_reserve, swap_exact_out_expected_receive,
+          swap_input_base_fee_numerator);
+      let swap_fee_sharing_amount =
+        scaled_amount_from_option(swap_exact_out_required_input_amount, swap_input_base_fee_numerator, fee_sharing_option);
+      let swap_exact_out_available_input_amount =
+        {
+          let swap_exact_out_max_amount_option_tag =
+            constr_tag_of(swap_exact_out_max_amount_option_data);
+          !
+            (
+              if (0 =i= swap_exact_out_max_amount_option_tag) {
+                #list_first_int(constr_fields_of(swap_exact_out_max_amount_option_data))
+              } else {
+                # {
+                  let swap_exact_out_max_amount_option_fields =
+                    constr_fields_of(swap_exact_out_max_amount_option_data);
+                  let swap_exact_out_excluded_input_amount =
+                    list_first_int(swap_exact_out_max_amount_option_fields);
+                  assert(0 <= swap_exact_out_excluded_input_amount);
+                  value_token_amount(order_input_value, swap_input_asset_policy_id, swap_input_asset_name) -
+                  swap_exact_out_excluded_input_amount
+                }
+              }
+            )
+        };
+      assert(0 < swap_exact_out_available_input_amount);
+      swap_exact_out_result_snapshot(
+        adjust_value_for_pair_delta,
+        matches_output_address_value_datum,
+        subtract_ada_amount,
+        pool_snapshot_from_values,
+        swap_exact_out_required_input_amount,
+        swap_exact_out_available_input_amount,
+        swap_exact_out_killable,
+        swap_exact_out_a_to_b,
+        order_input_value,
+        order_batcher_fee,
+        swap_input_asset_policy_id,
+        swap_input_asset_name,
+        swap_output_asset_policy_id,
+        swap_output_asset_name,
+        swap_exact_out_expected_receive,
+        swap_fee_sharing_amount,
+        success_receiver_asset_data,
+        success_receiver_datum_choice_data,
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        step_output_data,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        pool_value_reserve_a,
+        pool_value_reserve_b,
+        pool_total_liquidity,
+        pool_snapshot_before_step
+      )
+    },
+    outputs_after_step
+  )
+}
+
+@captures 9;
+fn resolve_deposit_amount_pair(constr_tag_of, constr_fields_of, value_token_amount, order_input_value, pool_asset_a_policy_id, pool_asset_a_name,
+  pool_asset_b_policy_id, pool_asset_b_name, deposit_amount_option_data) {
+  let deposit_amount_option_tag =
+    constr_tag_of(deposit_amount_option_data);
+  !
+  (
+  if (0 =i= deposit_amount_option_tag) {
+    #
+    {
+      let specific_deposit_fields =
+        constr_fields_of(deposit_amount_option_data);
+      mkPairData(
+      list_first(specific_deposit_fields),
+      list_second(specific_deposit_fields)
+      )
+    }
+  } else {
+    #
+    {
+      let all_deposit_fields =
+        constr_fields_of(deposit_amount_option_data);
+      let [all_deposit_deducted_amount_a << unIData,
+      all_deposit_tail] =
+        all_deposit_fields;
+      let all_deposit_deducted_amount_b =
+        list_first_int(all_deposit_tail);
+      assert(
+      (
+      and {
+        (
+        0
+        <=
+          all_deposit_deducted_amount_a
+        ),
+        (
+        0
+        <=
+          all_deposit_deducted_amount_b
+        ),
+      }
+      )
+      );
+      mkPairData(
+      iData(value_token_amount(order_input_value,
+      pool_asset_a_policy_id, pool_asset_a_name) -
+      all_deposit_deducted_amount_a),
+      iData(value_token_amount(order_input_value,
+      pool_asset_b_policy_id, pool_asset_b_name) -
+      all_deposit_deducted_amount_b)
+      )
+    }
+  }
+  )
+}
+
+@captures 10;
+fn compute_deposit_liquidity_adjustments(compute_quadratic_liquidity_pair, scaled_amount_with_denominator, deposit_amount_a, deposit_amount_b,
+  pool_total_liquidity, pool_datum_reserve_a, pool_datum_reserve_b, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option) {
+  let deposit_asset_a_liquidity_amount = deposit_amount_a *
+  pool_total_liquidity / pool_datum_reserve_a;
+  let deposit_asset_b_liquidity_amount = deposit_amount_b *
+  pool_total_liquidity / pool_datum_reserve_b;
+  !
+  (
+  if (deposit_asset_b_liquidity_amount <
+  deposit_asset_a_liquidity_amount) {
+    #
+    {
+      let deposit_asset_a_quadratic_fee_pair =
+        compute_quadratic_liquidity_pair(
+      deposit_amount_a,
+      deposit_amount_b,
+      pool_datum_reserve_a,
+      pool_datum_reserve_b,
+      base_fee_a_numerator
+      );
+      let deposit_asset_a_fee_numerator =
+        unIData(fstPair(
+      deposit_asset_a_quadratic_fee_pair));
+      let deposit_asset_a_fee_denominator =
+        unIData(sndPair(
+      deposit_asset_a_quadratic_fee_pair));
+      mkCons(
+      iData(scaled_amount_with_denominator(
+      deposit_asset_a_fee_numerator,
+      deposit_asset_a_fee_denominator,
+      base_fee_a_numerator, fee_sharing_option)),
+      mkCons(data(0), mkCons(iData((deposit_amount_a
+      * deposit_asset_a_fee_denominator -
+      deposit_asset_a_fee_numerator) *
+      pool_total_liquidity / (pool_datum_reserve_a
+      * deposit_asset_a_fee_denominator +
+      deposit_asset_a_fee_numerator)),
+      list<data>[]))
+      )
+    }
+  } else {
+    #
+    !
+    (
+    if (deposit_asset_a_liquidity_amount <
+    deposit_asset_b_liquidity_amount) {
+      #
+      {
+        let deposit_asset_b_quadratic_fee_pair =
+          compute_quadratic_liquidity_pair(
+        deposit_amount_b,
+        deposit_amount_a,
+        pool_datum_reserve_b,
+        pool_datum_reserve_a,
+        base_fee_b_numerator
+        );
+        let deposit_asset_b_fee_numerator =
+          unIData(fstPair(
+        deposit_asset_b_quadratic_fee_pair));
+        let deposit_asset_b_fee_denominator =
+          unIData(sndPair(
+        deposit_asset_b_quadratic_fee_pair));
+        mkCons(
+        data(0),
+        mkCons(iData(
+        scaled_amount_with_denominator(
+        deposit_asset_b_fee_numerator,
+        deposit_asset_b_fee_denominator,
+        base_fee_b_numerator,
+        fee_sharing_option)), mkCons(iData((
+        deposit_amount_b *
+        deposit_asset_b_fee_denominator -
+        deposit_asset_b_fee_numerator) *
+        pool_total_liquidity / (
+        pool_datum_reserve_b *
+        deposit_asset_b_fee_denominator +
+        deposit_asset_b_fee_numerator)),
+        list<data>[]))
+        )
+      }
+    } else {
+      #
+      (mkCons(
+      data(0),
+      mkCons(data(0), mkCons(iData(
+      deposit_asset_a_liquidity_amount),
+      list<data>[]))
+      ))
+    }
+    )
+  }
+  )
+}
+
+@captures 30;
+fn deposit_result_snapshot(
+  value_add, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  deposit_minimum_lp, minted_lp_amount, deposit_killable, order_input_value,
+  order_batcher_fee, pool_asset_a_policy_id, pool_asset_a_name, deposit_amount_a,
+  pool_asset_b_policy_id, pool_asset_b_name, deposit_amount_b, pool_lp_asset_policy_id,
+  pool_lp_asset_name, success_receiver_asset_data, success_receiver_datum_choice_data, refund_receiver_asset_data,
+  refund_receiver_datum_choice_data, step_output_data, pool_datum_reserve_a, pool_datum_reserve_b,
+  pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity, deposit_fee_sharing_a,
+  deposit_fee_sharing_b, pool_snapshot_before_step
+) {
+  let deposit_succeeds = deposit_minimum_lp <= minted_lp_amount;
+  !
+  (
+  if (deposit_succeeds) {
+    #
+    {
+      let expected_step_output_value =
+        value_add(
+      value_add(value_add(value_add(order_input_value,
+      0x, 0x, 0 - order_batcher_fee),
+      pool_asset_a_policy_id, pool_asset_a_name, 0 -
+      deposit_amount_a), pool_asset_b_policy_id,
+      pool_asset_b_name, 0 - deposit_amount_b),
+      pool_lp_asset_policy_id,
+      pool_lp_asset_name,
+      minted_lp_amount
+      );
+      assert(
+      (matches_output_address_value_datum(
+      success_receiver_asset_data,
+      success_receiver_datum_choice_data,
+      expected_step_output_value,
+      step_output_data
+      ))
+      );
+      pool_snapshot_from_values(
+      pool_datum_reserve_a + deposit_amount_a -
+      deposit_fee_sharing_a,
+      pool_datum_reserve_b +
+      deposit_amount_b - deposit_fee_sharing_b,
+      pool_value_reserve_a +
+      deposit_amount_a,
+      pool_value_reserve_b + deposit_amount_b,
+      pool_total_liquidity +
+      minted_lp_amount
+      )
+    }
+  } else {
+    #
+    {
+      assert(
+      (
+      and {
+        deposit_killable,
+        matches_output_address_value_datum(
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        subtract_ada_amount(order_input_value,
+        order_batcher_fee),
+        step_output_data
+        ),
+      }
+      )
+      );
+      pool_snapshot_before_step
+    }
+  }
+  )
+}
+
+@captures 25;
+fn apply_deposit_step(constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount, value_add, compute_quadratic_liquidity_pair,
+  scaled_amount_with_denominator, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values, order_step_data, outputs_remaining,
+  order_input_value, refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data,
+  pool_asset_a, pool_asset_b, pool_lp_asset, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+  pool_snapshot_before_step) {
+  let deposit_step_fields =
+    constr_fields_of(order_step_data);
+  let [deposit_amount_option_data, deposit_after_amount_option] =
+    deposit_step_fields;
+  let [deposit_minimum_lp << unIData, deposit_after_minimum_lp] =
+    deposit_after_amount_option;
+  let deposit_killable =
+    1 =i= list_first_constr_tag(deposit_after_minimum_lp);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(0 < deposit_minimum_lp);
+  step_result_pair(
+    {
+      let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+        pool_snapshot_before_step;
+      let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+        after_pool_datum_reserve_a;
+      let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+        after_pool_datum_reserve_b;
+      let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+        after_pool_value_reserve_a;
+      let pool_total_liquidity =
+        list_first_int(after_pool_value_reserve_b);
+      let pool_asset_a_fields =
+        constr_fields_of(pool_asset_a);
+      let [pool_asset_a_policy_id << unBData, after_pool_asset_a_policy_id] =
+        pool_asset_a_fields;
+      let pool_asset_a_name =
+        list_first_bytes(after_pool_asset_a_policy_id);
+      let pool_asset_b_fields =
+        constr_fields_of(pool_asset_b);
+      let [pool_asset_b_policy_id << unBData, after_pool_asset_b_policy_id] =
+        pool_asset_b_fields;
+      let pool_asset_b_name =
+        list_first_bytes(after_pool_asset_b_policy_id);
+      let pool_lp_asset_fields =
+        constr_fields_of(pool_lp_asset);
+      let [pool_lp_asset_policy_id << unBData, after_pool_lp_asset_policy_id] =
+        pool_lp_asset_fields;
+      let pool_lp_asset_name =
+        list_first_bytes(after_pool_lp_asset_policy_id);
+      let deposit_amount_pair =
+        resolve_deposit_amount_pair(
+          constr_tag_of,
+          constr_fields_of,
+          value_token_amount,
+          order_input_value,
+          pool_asset_a_policy_id,
+          pool_asset_a_name,
+          pool_asset_b_policy_id,
+          pool_asset_b_name,
+          deposit_amount_option_data
+        );
+      let deposit_amount_a =
+        unIData(fstPair(deposit_amount_pair));
+      let deposit_amount_b =
+        unIData(sndPair(deposit_amount_pair));
+      assert(positive_deposit_amounts(deposit_amount_a, deposit_amount_b));
+      let deposit_liquidity_adjustments =
+        compute_deposit_liquidity_adjustments(
+          compute_quadratic_liquidity_pair,
+          scaled_amount_with_denominator,
+          deposit_amount_a,
+          deposit_amount_b,
+          pool_total_liquidity,
+          pool_datum_reserve_a,
+          pool_datum_reserve_b,
+          base_fee_a_numerator,
+          base_fee_b_numerator,
+          fee_sharing_option
+        );
+      let [deposit_fee_sharing_a << unIData, after_deposit_fee_sharing_a] =
+        deposit_liquidity_adjustments;
+      let [deposit_fee_sharing_b << unIData, after_deposit_fee_sharing_b] =
+        after_deposit_fee_sharing_a;
+      let minted_lp_amount =
+        list_first_int(after_deposit_fee_sharing_b);
+      deposit_result_snapshot(
+        value_add,
+        matches_output_address_value_datum,
+        subtract_ada_amount,
+        pool_snapshot_from_values,
+        deposit_minimum_lp,
+        minted_lp_amount,
+        deposit_killable,
+        order_input_value,
+        order_batcher_fee,
+        pool_asset_a_policy_id,
+        pool_asset_a_name,
+        deposit_amount_a,
+        pool_asset_b_policy_id,
+        pool_asset_b_name,
+        deposit_amount_b,
+        pool_lp_asset_policy_id,
+        pool_lp_asset_name,
+        success_receiver_asset_data,
+        success_receiver_datum_choice_data,
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        step_output_data,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        pool_value_reserve_a,
+        pool_value_reserve_b,
+        pool_total_liquidity,
+        deposit_fee_sharing_a,
+        deposit_fee_sharing_b,
+        pool_snapshot_before_step
+      )
+    },
+    outputs_after_step
+  )
+}
+@captures 29;
+fn withdraw_result_snapshot(
+  value_add, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  withdraw_minimum_asset_a, withdraw_minimum_asset_b, withdraw_asset_a_amount, withdraw_asset_b_amount,
+  withdraw_killable, order_input_value, order_batcher_fee, pool_lp_asset_policy_id,
+  pool_lp_asset_name, withdraw_lp_burn_amount, pool_asset_a_policy_id, pool_asset_a_name,
+  pool_asset_b_policy_id, pool_asset_b_name, success_receiver_asset_data, success_receiver_datum_choice_data,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, step_output_data, pool_datum_reserve_a,
+  pool_datum_reserve_b, pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity,
+  pool_snapshot_before_step
+) {
+  let withdraw_succeeds = and {
+    withdraw_minimum_asset_a <= withdraw_asset_a_amount,
+    withdraw_minimum_asset_b <= withdraw_asset_b_amount
+  };
+  !
+  (
+    if (withdraw_succeeds) {
+      #
+      {
+        let expected_step_output_value =
+          value_add(
+            value_add(
+              value_add(
+                value_add(
+                  order_input_value,
+                  0x,
+                  0x,
+                  0 - order_batcher_fee
+                ),
+                pool_lp_asset_policy_id,
+                pool_lp_asset_name,
+                0 - withdraw_lp_burn_amount
+              ),
+              pool_asset_a_policy_id,
+              pool_asset_a_name,
+              withdraw_asset_a_amount
+            ),
+            pool_asset_b_policy_id,
+            pool_asset_b_name,
+            withdraw_asset_b_amount
+          );
+        assert(
+          (
+            matches_output_address_value_datum(
+              success_receiver_asset_data,
+              success_receiver_datum_choice_data,
+              expected_step_output_value,
+              step_output_data
+            )
+          )
+        );
+        pool_snapshot_from_values(
+          pool_datum_reserve_a - withdraw_asset_a_amount,
+          pool_datum_reserve_b - withdraw_asset_b_amount,
+          pool_value_reserve_a - withdraw_asset_a_amount,
+          pool_value_reserve_b - withdraw_asset_b_amount,
+          pool_total_liquidity - withdraw_lp_burn_amount
+        )
+      }
+    } else {
+      #
+      {
+        assert(
+          (
+            and {
+              withdraw_killable,
+              matches_output_address_value_datum(
+                refund_receiver_asset_data,
+                refund_receiver_datum_choice_data,
+                subtract_ada_amount(
+                  order_input_value,
+                  order_batcher_fee
+                ),
+                step_output_data
+              ),
+            }
+          )
+        );
+        pool_snapshot_before_step
+      }
+    }
+  )
+}
+
+@captures 2;
+fn positive_withdraw_minimums(minimum_asset_a, minimum_asset_b) {
+  and {
+    0 < minimum_asset_a,
+    0 < minimum_asset_b,
+  }
+}
+
+@captures 21;
+fn apply_withdraw_step(constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount, value_add, proportional_amount_pair,
+  matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values, order_step_data, outputs_remaining, order_input_value,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data, pool_asset_a,
+  pool_asset_b, pool_lp_asset, order_batcher_fee, pool_snapshot_before_step) {
+  let withdraw_step_fields =
+    constr_fields_of(order_step_data);
+  let [withdraw_lp_amount_option_data, withdraw_after_lp_amount_option] =
+    withdraw_step_fields;
+  let [withdraw_minimum_asset_a << unIData, withdraw_after_minimum_asset_a] =
+    withdraw_after_lp_amount_option;
+  let [withdraw_minimum_asset_b << unIData, withdraw_after_minimum_asset_b] =
+    withdraw_after_minimum_asset_a;
+  let withdraw_killable =
+    1 =i= list_first_constr_tag(withdraw_after_minimum_asset_b);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(positive_withdraw_minimums(withdraw_minimum_asset_a, withdraw_minimum_asset_b));
+  step_result_pair(
+    {
+      let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+        pool_snapshot_before_step;
+      let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+        after_pool_datum_reserve_a;
+      let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+        after_pool_datum_reserve_b;
+      let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+        after_pool_value_reserve_a;
+      let pool_total_liquidity =
+        list_first_int(after_pool_value_reserve_b);
+      let pool_asset_a_fields =
+        constr_fields_of(pool_asset_a);
+      let [pool_asset_a_policy_id << unBData, after_pool_asset_a_policy_id] =
+        pool_asset_a_fields;
+      let pool_asset_a_name =
+        list_first_bytes(after_pool_asset_a_policy_id);
+      let pool_asset_b_fields =
+        constr_fields_of(pool_asset_b);
+      let [pool_asset_b_policy_id << unBData, after_pool_asset_b_policy_id] =
+        pool_asset_b_fields;
+      let pool_asset_b_name =
+        list_first_bytes(after_pool_asset_b_policy_id);
+      let pool_lp_asset_fields =
+        constr_fields_of(pool_lp_asset);
+      let [pool_lp_asset_policy_id << unBData, after_pool_lp_asset_policy_id] =
+        pool_lp_asset_fields;
+      let pool_lp_asset_name =
+        list_first_bytes(after_pool_lp_asset_policy_id);
+      let withdraw_lp_burn_amount =
+        resolve_lp_burn_amount(
+          constr_tag_of,
+          constr_fields_of,
+          value_token_amount,
+          order_input_value,
+          pool_lp_asset_policy_id,
+          pool_lp_asset_name,
+          withdraw_lp_amount_option_data
+        );
+      assert(positive_lp_burn_amount(withdraw_lp_burn_amount));
+      let withdraw_asset_amount_pair =
+        proportional_amount_pair(
+          pool_datum_reserve_a,
+          pool_datum_reserve_b,
+          withdraw_lp_burn_amount,
+          pool_total_liquidity
+        );
+      let withdraw_asset_a_amount =
+        unIData(fstPair(withdraw_asset_amount_pair));
+      let withdraw_asset_b_amount =
+        unIData(sndPair(withdraw_asset_amount_pair));
+      withdraw_result_snapshot(
+        value_add,
+        matches_output_address_value_datum,
+        subtract_ada_amount,
+        pool_snapshot_from_values,
+        withdraw_minimum_asset_a,
+        withdraw_minimum_asset_b,
+        withdraw_asset_a_amount,
+        withdraw_asset_b_amount,
+        withdraw_killable,
+        order_input_value,
+        order_batcher_fee,
+        pool_lp_asset_policy_id,
+        pool_lp_asset_name,
+        withdraw_lp_burn_amount,
+        pool_asset_a_policy_id,
+        pool_asset_a_name,
+        pool_asset_b_policy_id,
+        pool_asset_b_name,
+        success_receiver_asset_data,
+        success_receiver_datum_choice_data,
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        step_output_data,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        pool_value_reserve_a,
+        pool_value_reserve_b,
+        pool_total_liquidity,
+        pool_snapshot_before_step
+      )
+    },
+    outputs_after_step
+  )
+}
+@captures 7;
+fn resolve_lp_burn_amount(constr_tag_of, constr_fields_of, value_token_amount, order_input_value, pool_lp_asset_policy_id,
+  pool_lp_asset_name, lp_amount_option_data) {
+  let lp_burn_amount_option_tag =
+    constr_tag_of(
+  lp_amount_option_data);
+  !
+  (
+  if (0 =i=
+    lp_burn_amount_option_tag) {
+    #
+    list_first_int(constr_fields_of(lp_amount_option_data))
+  } else {
+    #
+    {
+      let
+      lp_burn_amount_option_fields
+      =
+        constr_fields_of(
+      lp_amount_option_data);
+      let
+      excluded_lp_amount =
+        list_first_int(lp_burn_amount_option_fields);
+      assert(
+      (
+      0
+      <=
+        excluded_lp_amount
+      )
+      );
+      (
+      (value_token_amount(
+      order_input_value,
+      pool_lp_asset_policy_id,
+      pool_lp_asset_name
+      ))
+      -
+      excluded_lp_amount
+      )
+    }
+  }
+  )
+}
+
+@captures 11;
+fn compute_zap_out_swap_adjustments(proportional_amount_pair, scaled_amount_from_option, constant_product_swap_out, zap_out_a_to_b,
+  pool_datum_reserve_a, pool_datum_reserve_b, zap_out_lp_burn_amount, pool_total_liquidity, base_fee_a_numerator, base_fee_b_numerator,
+  fee_sharing_option) {
+  let zap_out_withdrawn_amount_pair =
+    proportional_amount_pair(
+  pool_datum_reserve_a,
+  pool_datum_reserve_b,
+  zap_out_lp_burn_amount,
+  pool_total_liquidity
+  );
+  let zap_out_withdrawn_asset_a_amount =
+    unIData(fstPair(
+  zap_out_withdrawn_amount_pair));
+  let zap_out_withdrawn_asset_b_amount =
+    unIData(sndPair(
+  zap_out_withdrawn_amount_pair));
+  let post_withdrawal_datum_reserve_a =
+    pool_datum_reserve_a -
+  zap_out_withdrawn_asset_a_amount;
+  let post_withdrawal_datum_reserve_b =
+    pool_datum_reserve_b -
+  zap_out_withdrawn_asset_b_amount;
+  !
+  (
+  if (zap_out_a_to_b) {
+    #
+    (mkCons(
+    iData(scaled_amount_from_option(
+    zap_out_withdrawn_asset_a_amount,
+    base_fee_a_numerator,
+    fee_sharing_option)),
+    mkCons(data(0), mkCons(iData(
+    zap_out_withdrawn_asset_b_amount +
+    constant_product_swap_out(
+    post_withdrawal_datum_reserve_a,
+    post_withdrawal_datum_reserve_b,
+    zap_out_withdrawn_asset_a_amount,
+    base_fee_a_numerator)), list<data>[]))
+    ))
+  } else {
+    #
+    (mkCons(
+    data(0),
+    mkCons(iData(
+    scaled_amount_from_option(
+    zap_out_withdrawn_asset_b_amount,
+    base_fee_b_numerator,
+    fee_sharing_option)), mkCons(iData(
+    zap_out_withdrawn_asset_a_amount +
+    constant_product_swap_out(
+    post_withdrawal_datum_reserve_b,
+    post_withdrawal_datum_reserve_a,
+    zap_out_withdrawn_asset_b_amount,
+    base_fee_b_numerator)), list<data>[]))
+    ))
+  }
+  )
+}
+
+@captures 28;
+fn zap_out_result_snapshot(
+  value_add, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  zap_out_minimum_receive, zap_out_output_amount, zap_out_killable, zap_out_a_to_b,
+  order_input_value, order_batcher_fee, pool_lp_asset_policy_id, pool_lp_asset_name,
+  zap_out_lp_burn_amount, zap_output_asset_policy_id, zap_output_asset_name, success_receiver_asset_data,
+  success_receiver_datum_choice_data, refund_receiver_asset_data, refund_receiver_datum_choice_data, step_output_data,
+  pool_datum_reserve_a, pool_datum_reserve_b, pool_value_reserve_a, pool_value_reserve_b,
+  pool_total_liquidity, zap_out_fee_sharing_a, zap_out_fee_sharing_b, pool_snapshot_before_step
+) {
+  let zap_out_succeeds = zap_out_minimum_receive
+  <= zap_out_output_amount;
+  !
+  (
+  if (zap_out_succeeds) {
+    #
+    {
+      let expected_step_output_value =
+        value_add(
+      value_add(value_add(
+      order_input_value, 0x, 0x, 0 -
+      order_batcher_fee),
+      pool_lp_asset_policy_id,
+      pool_lp_asset_name, 0 -
+      zap_out_lp_burn_amount),
+      zap_output_asset_policy_id,
+      zap_output_asset_name,
+      zap_out_output_amount
+      );
+      assert(
+      (
+      matches_output_address_value_datum(
+      success_receiver_asset_data,
+      success_receiver_datum_choice_data,
+      expected_step_output_value,
+      step_output_data
+      ))
+      );
+      !
+      (
+      if (zap_out_a_to_b) {
+        #
+        pool_snapshot_from_values(
+        pool_datum_reserve_a
+        - zap_out_fee_sharing_a,
+        pool_datum_reserve_b -
+        zap_out_fee_sharing_b -
+        zap_out_output_amount,
+        pool_value_reserve_a,
+        pool_value_reserve_b -
+        zap_out_output_amount,
+        pool_total_liquidity -
+        zap_out_lp_burn_amount
+        )
+      } else {
+        #
+        pool_snapshot_from_values(
+        pool_datum_reserve_a
+        - zap_out_output_amount -
+        zap_out_fee_sharing_a,
+        pool_datum_reserve_b -
+        zap_out_fee_sharing_b,
+        pool_value_reserve_a -
+        zap_out_output_amount,
+        pool_value_reserve_b,
+        pool_total_liquidity -
+        zap_out_lp_burn_amount
+        )
+      }
+      )
+    }
+  } else {
+    #
+    {
+      assert(
+      (
+      and {
+        zap_out_killable,
+        matches_output_address_value_datum(
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        subtract_ada_amount(
+        order_input_value, order_batcher_fee),
+        step_output_data
+        ),
+      }
+      )
+      );
+      pool_snapshot_before_step
+    }
+  }
+  )
+}
+
+@captures 1;
+fn positive_zap_out_receive(minimum_receive) {
+  0 < minimum_receive
+}
+
+@captures 26;
+fn apply_zap_out_step(constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount, value_add, proportional_amount_pair,
+  scaled_amount_from_option, constant_product_swap_out, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  order_step_data, outputs_remaining, order_input_value, refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data,
+  success_receiver_datum_choice_data, pool_asset_a, pool_asset_b, pool_lp_asset, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator,
+  fee_sharing_option, pool_snapshot_before_step) {
+  let zap_out_step_fields =
+    constr_fields_of(order_step_data);
+  let zap_out_a_to_b =
+    1 =i= list_first_constr_tag(zap_out_step_fields);
+  let zap_out_after_direction =
+    tailList(zap_out_step_fields);
+  let [zap_out_lp_amount_option_data, zap_out_after_amount_option] =
+    zap_out_after_direction;
+  let [zap_out_minimum_receive << unIData, zap_out_after_minimum_receive] =
+    zap_out_after_amount_option;
+  let zap_out_killable =
+    1 =i= list_first_constr_tag(zap_out_after_minimum_receive);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(positive_zap_out_receive(zap_out_minimum_receive));
+  step_result_pair(
+    {
+      let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+        pool_snapshot_before_step;
+      let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+        after_pool_datum_reserve_a;
+      let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+        after_pool_datum_reserve_b;
+      let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+        after_pool_value_reserve_a;
+      let pool_total_liquidity =
+        list_first_int(after_pool_value_reserve_b);
+      let zap_output_asset_data = !(if (zap_out_a_to_b) { #pool_asset_b } else { #pool_asset_a });
+      let zap_output_asset_fields =
+        constr_fields_of(zap_output_asset_data);
+      let [zap_output_asset_policy_id << unBData, after_zap_output_asset_policy_id] =
+        zap_output_asset_fields;
+      let zap_output_asset_name =
+        list_first_bytes(after_zap_output_asset_policy_id);
+      let pool_lp_asset_fields =
+        constr_fields_of(pool_lp_asset);
+      let [pool_lp_asset_policy_id << unBData, after_pool_lp_asset_policy_id] =
+        pool_lp_asset_fields;
+      let pool_lp_asset_name =
+        list_first_bytes(after_pool_lp_asset_policy_id);
+      let zap_out_lp_burn_amount =
+        resolve_lp_burn_amount(
+          constr_tag_of,
+          constr_fields_of,
+          value_token_amount,
+          order_input_value,
+          pool_lp_asset_policy_id,
+          pool_lp_asset_name,
+          zap_out_lp_amount_option_data
+        );
+      assert(positive_lp_burn_amount(zap_out_lp_burn_amount));
+      let zap_out_swap_adjustments =
+        compute_zap_out_swap_adjustments(
+          proportional_amount_pair,
+          scaled_amount_from_option,
+          constant_product_swap_out,
+          zap_out_a_to_b,
+          pool_datum_reserve_a,
+          pool_datum_reserve_b,
+          zap_out_lp_burn_amount,
+          pool_total_liquidity,
+          base_fee_a_numerator,
+          base_fee_b_numerator,
+          fee_sharing_option
+        );
+      let [zap_out_fee_sharing_a << unIData, after_zap_out_fee_sharing_a] =
+        zap_out_swap_adjustments;
+      let [zap_out_fee_sharing_b << unIData, after_zap_out_fee_sharing_b] =
+        after_zap_out_fee_sharing_a;
+      let zap_out_output_amount =
+        list_first_int(after_zap_out_fee_sharing_b);
+      zap_out_result_snapshot(
+        value_add,
+        matches_output_address_value_datum,
+        subtract_ada_amount,
+        pool_snapshot_from_values,
+        zap_out_minimum_receive,
+        zap_out_output_amount,
+        zap_out_killable,
+        zap_out_a_to_b,
+        order_input_value,
+        order_batcher_fee,
+        pool_lp_asset_policy_id,
+        pool_lp_asset_name,
+        zap_out_lp_burn_amount,
+        zap_output_asset_policy_id,
+        zap_output_asset_name,
+        success_receiver_asset_data,
+        success_receiver_datum_choice_data,
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        step_output_data,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        pool_value_reserve_a,
+        pool_value_reserve_b,
+        pool_total_liquidity,
+        zap_out_fee_sharing_a,
+        zap_out_fee_sharing_b,
+        pool_snapshot_before_step
+      )
+    },
+    outputs_after_step
+  )
+}
+@captures 5;
+fn compute_partial_swap_ratio_target_amount(
+  partial_swap_io_ratio_numerator, partial_swap_io_ratio_denominator, swap_input_base_fee_numerator,
+  swap_output_datum_reserve, swap_input_datum_reserve
+) {
+  let fee_multiplier =
+    10000 - swap_input_base_fee_numerator;
+  let partial_swap_ratio_numerator_delta =
+    partial_swap_io_ratio_numerator *
+    fee_multiplier *
+    swap_output_datum_reserve -
+    partial_swap_io_ratio_denominator *
+    10000 *
+    swap_input_datum_reserve;
+  let partial_swap_ratio_denominator_delta =
+    partial_swap_io_ratio_denominator *
+    fee_multiplier;
+  let partial_swap_target_amount =
+    partial_swap_ratio_numerator_delta /
+    partial_swap_ratio_denominator_delta;
+  assert(
+    (
+      0 < partial_swap_target_amount
+    )
+  );
+  partial_swap_target_amount
+}
+
+@captures 12;
+fn partial_swap_progress_snapshot(
+  partial_swap_a_to_b, partial_swap_hops, partial_swap_minimum_swap_amount_required,
+  partial_swap_remaining_total_amount, pool_datum_reserve_a, pool_datum_reserve_b,
+  pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity,
+  partial_swap_amount, swap_fee_sharing_amount, partial_swap_output_amount
+) {
+  let partial_swap_continues = and {
+    1 < partial_swap_hops,
+    partial_swap_minimum_swap_amount_required <= partial_swap_remaining_total_amount
+  };
+  !
+  (
+    if (partial_swap_a_to_b) {
+      #
+      (
+        mkCons(
+          iData(pool_datum_reserve_a + partial_swap_amount - swap_fee_sharing_amount),
+          mkCons(
+            iData(pool_datum_reserve_b - partial_swap_output_amount),
+            mkCons(
+              iData(pool_value_reserve_a + partial_swap_amount),
+              mkCons(
+                iData(pool_value_reserve_b - partial_swap_output_amount),
+                mkCons(
+                  iData(pool_total_liquidity),
+                  mkCons(
+                    iData(partial_swap_remaining_total_amount),
+                    mkCons(
+                      if (partial_swap_continues) {
+                        data(constr 1 [])
+                      } else {
+                        data(constr 0 [])
+                      },
+                      list<data>[]
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    } else {
+      #
+      (
+        mkCons(
+          iData(pool_datum_reserve_a - partial_swap_output_amount),
+          mkCons(
+            iData(pool_datum_reserve_b + partial_swap_amount - swap_fee_sharing_amount),
+            mkCons(
+              iData(pool_value_reserve_a - partial_swap_output_amount),
+              mkCons(
+                iData(pool_value_reserve_b + partial_swap_amount),
+                mkCons(
+                  iData(pool_total_liquidity),
+                  mkCons(
+                    iData(partial_swap_remaining_total_amount),
+                    mkCons(
+                      if (partial_swap_continues) {
+                        data(constr 1 [])
+                      } else {
+                        data(constr 0 [])
+                      },
+                      list<data>[]
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+}
+
+@captures 4;
+fn valid_partial_swap_result(
+  partial_swap_amount, partial_swap_minimum_swap_amount_required,
+  expected_partial_swap_output_value, partial_swap_output_value_map
+) {
+  and {
+    (
+      0 < partial_swap_amount
+    ),
+    (
+      partial_swap_minimum_swap_amount_required <= partial_swap_amount
+    ),
+    (
+      mapData(expected_partial_swap_output_value) =d= mapData(partial_swap_output_value_map)
+    ),
+  }
+}
+
+@captures 18;
+fn partial_swap_result_snapshot(
+  constr_fields_of, constant_product_swap_out, scaled_amount_from_option,
+  adjust_value_for_pair_delta, order_input_value, order_batcher_fee,
+  partial_swap_a_to_b, partial_swap_total_swap_amount, partial_swap_io_ratio_numerator,
+  partial_swap_io_ratio_denominator, partial_swap_minimum_swap_amount_required,
+  partial_swap_output_value_map, pool_asset_a, pool_asset_b, base_fee_a_numerator,
+  base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step
+) {
+  let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+    pool_snapshot_before_step;
+  let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+    after_pool_datum_reserve_a;
+  let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+    after_pool_datum_reserve_b;
+  let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+    after_pool_value_reserve_a;
+  let pool_total_liquidity =
+    list_first_int(after_pool_value_reserve_b);
+  let partial_swap_direction_context =
+    asset_direction_context(
+      partial_swap_a_to_b,
+      pool_asset_a,
+      pool_asset_b,
+      pool_datum_reserve_a,
+      pool_datum_reserve_b,
+      base_fee_a_numerator,
+      base_fee_b_numerator
+    );
+  let [swap_input_asset_data, after_swap_input_asset_data] =
+    partial_swap_direction_context;
+  let [swap_output_asset_data, after_swap_output_asset_data] =
+    after_swap_input_asset_data;
+  let [swap_input_datum_reserve << unIData, after_swap_input_datum_reserve] =
+    after_swap_output_asset_data;
+  let [swap_output_datum_reserve << unIData, after_swap_output_datum_reserve] =
+    after_swap_input_datum_reserve;
+  let swap_input_base_fee_numerator =
+    list_first_int(after_swap_output_datum_reserve);
+  let swap_input_asset_fields =
+    constr_fields_of(swap_input_asset_data);
+  let [swap_input_asset_policy_id << unBData, after_swap_input_asset_policy_id] =
+    swap_input_asset_fields;
+  let swap_input_asset_name =
+    list_first_bytes(after_swap_input_asset_policy_id);
+  let swap_output_asset_fields =
+    constr_fields_of(swap_output_asset_data);
+  let [swap_output_asset_policy_id << unBData, after_swap_output_asset_policy_id] =
+    swap_output_asset_fields;
+  let swap_output_asset_name =
+    list_first_bytes(after_swap_output_asset_policy_id);
+  let partial_swap_ratio_target_amount =
+    compute_partial_swap_ratio_target_amount(
+      partial_swap_io_ratio_numerator,
+      partial_swap_io_ratio_denominator,
+      swap_input_base_fee_numerator,
+      swap_output_datum_reserve,
+      swap_input_datum_reserve
+    );
+  let partial_swap_amount =
+    !(
+      if (partial_swap_total_swap_amount <= partial_swap_ratio_target_amount) {
+        #partial_swap_total_swap_amount
+      } else {
+        #partial_swap_ratio_target_amount
+      }
+    );
+  let partial_swap_remaining_total_amount =
+    partial_swap_total_swap_amount - partial_swap_amount;
+  let partial_swap_output_amount =
+    constant_product_swap_out(
+      swap_input_datum_reserve,
+      swap_output_datum_reserve,
+      partial_swap_amount,
+      swap_input_base_fee_numerator
+    );
+  let swap_fee_sharing_amount =
+    scaled_amount_from_option(
+      partial_swap_amount,
+      swap_input_base_fee_numerator,
+      fee_sharing_option
+    );
+  let expected_partial_swap_output_value =
+    adjust_value_for_pair_delta(
+      order_input_value,
+      order_batcher_fee,
+      swap_input_asset_policy_id,
+      swap_input_asset_name,
+      swap_output_asset_policy_id,
+      swap_output_asset_name,
+      partial_swap_amount,
+      partial_swap_output_amount
+    );
+  assert(
+    valid_partial_swap_result(
+      partial_swap_amount,
+      partial_swap_minimum_swap_amount_required,
+      expected_partial_swap_output_value,
+      partial_swap_output_value_map
+    )
+  );
+  partial_swap_progress_snapshot(
+    partial_swap_a_to_b,
+    partial_swap_hops,
+    partial_swap_minimum_swap_amount_required,
+    partial_swap_remaining_total_amount,
+    pool_datum_reserve_a,
+    pool_datum_reserve_b,
+    pool_value_reserve_a,
+    pool_value_reserve_b,
+    pool_total_liquidity,
+    partial_swap_amount,
+    swap_fee_sharing_amount,
+    partial_swap_output_amount
+  )
+}
+
+@captures 24;
+fn partial_swap_continuation_matches(
+  constr_fields_of, resolve_output_datum_data, assert_order_datum_shape, matches_output_address_datum,
+  partial_swap_has_next_hop, step_output_data, datum_map, order_input_address,
+  order_canceller_data, refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data,
+  success_receiver_datum_choice_data, order_lp_asset_data, partial_swap_a_to_b, partial_swap_remaining_amount,
+  partial_swap_io_ratio_numerator, partial_swap_io_ratio_denominator, partial_swap_hops, partial_swap_minimum_swap_amount_required,
+  partial_swap_max_batcher_fee_each_time, max_order_batcher_fee, order_batcher_fee, order_expiry_setting_data
+) {
+  !(
+    if (partial_swap_has_next_hop) {
+      # {
+        let continuation_output_fields =
+          constr_fields_of(step_output_data);
+        let [continuation_output_address, continuation_after_address] =
+          continuation_output_fields;
+        let continuation_after_value =
+          tailList(continuation_after_address);
+        let continuation_datum_reference =
+          list_first(continuation_after_value);
+        let continuation_datum_data =
+          resolve_output_datum_data(
+            datum_map,
+            continuation_datum_reference
+          );
+        let continuation_datum_shape_checked =
+          assert_order_datum_shape(continuation_datum_data);
+        let expected_continuation_datum =
+          constrData(
+            0,
+            mkCons(
+              order_canceller_data,
+              mkCons(
+                refund_receiver_asset_data,
+                mkCons(
+                  refund_receiver_datum_choice_data,
+                  mkCons(
+                    success_receiver_asset_data,
+                    mkCons(
+                      success_receiver_datum_choice_data,
+                      mkCons(
+                        order_lp_asset_data,
+                        mkCons(
+                          constrData(
+                            7,
+                            mkCons(
+                              if (partial_swap_a_to_b) {
+                                data(constr 1 [])
+                              } else {
+                                data(constr 0 [])
+                              },
+                              mkCons(
+                                iData(partial_swap_remaining_amount),
+                                mkCons(
+                                  iData(partial_swap_io_ratio_numerator),
+                                  mkCons(
+                                    iData(partial_swap_io_ratio_denominator),
+                                    mkCons(
+                                      iData(partial_swap_hops - 1),
+                                      mkCons(
+                                        iData(partial_swap_minimum_swap_amount_required),
+                                        mkCons(
+                                          iData(partial_swap_max_batcher_fee_each_time),
+                                          list<data>[]
+                                        )
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          ),
+                          mkCons(
+                            iData(max_order_batcher_fee - order_batcher_fee),
+                            mkCons(
+                              order_expiry_setting_data,
+                              list<data>[]
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          );
+        and {
+          (
+            expected_continuation_datum =d= continuation_datum_data
+          ),
+          (
+            order_input_address =d= continuation_output_address
+          ),
+        }
+      }
+    } else {
+      #
+        (
+          matches_output_address_datum(
+            success_receiver_asset_data,
+            success_receiver_datum_choice_data,
+            step_output_data
+          )
+        )
+    }
+  )
+}
+
+@captures 7;
+fn valid_partial_swap_request(
+  partial_swap_io_ratio_numerator, partial_swap_io_ratio_denominator,
+  partial_swap_hops, partial_swap_minimum_swap_amount_required,
+  partial_swap_total_swap_amount, order_batcher_fee, partial_swap_max_batcher_fee_each_time
+) {
+  and {
+    (
+      0 < partial_swap_io_ratio_numerator
+    ),
+    (
+      0 < partial_swap_io_ratio_denominator
+    ),
+    (
+      0 < partial_swap_hops
+    ),
+    (
+      0 < partial_swap_minimum_swap_amount_required
+    ),
+    (
+      partial_swap_minimum_swap_amount_required <= partial_swap_total_swap_amount
+    ),
+    (
+      order_batcher_fee <= partial_swap_max_batcher_fee_each_time
+    ),
+  }
+}
+
+@captures 29;
+fn apply_partial_swap_step(constr_fields_of, list_first_constr_tag, resolve_output_datum_data, assert_order_datum_shape, matches_output_address_datum,
+  constant_product_swap_out, scaled_amount_from_option, adjust_value_for_pair_delta, pool_snapshot_from_values, order_step_data, outputs_remaining,
+  order_input_value, order_input_address, order_canceller_data, refund_receiver_asset_data, refund_receiver_datum_choice_data,
+  success_receiver_asset_data, success_receiver_datum_choice_data, order_lp_asset_data, max_order_batcher_fee, order_expiry_setting_data,
+  pool_asset_a, pool_asset_b, order_batcher_fee, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, datum_map,
+  pool_snapshot_before_step) {
+  let partial_swap_step_fields =
+    constr_fields_of(order_step_data);
+  let partial_swap_a_to_b =
+    1 =i= list_first_constr_tag(partial_swap_step_fields);
+  let partial_swap_after_direction =
+    tailList(partial_swap_step_fields);
+  let [partial_swap_total_swap_amount << unIData, partial_swap_after_total_amount] =
+    partial_swap_after_direction;
+  let [partial_swap_io_ratio_numerator << unIData, partial_swap_after_ratio_numerator] =
+    partial_swap_after_total_amount;
+  let [partial_swap_io_ratio_denominator << unIData, partial_swap_after_ratio_denominator] =
+    partial_swap_after_ratio_numerator;
+  let [partial_swap_hops << unIData, partial_swap_after_hops] =
+    partial_swap_after_ratio_denominator;
+  let [partial_swap_minimum_swap_amount_required << unIData, partial_swap_after_minimum_required] =
+    partial_swap_after_hops;
+  let partial_swap_max_batcher_fee_each_time =
+    list_first_int(partial_swap_after_minimum_required);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  let partial_swap_output_fields =
+    constr_fields_of(step_output_data);
+  let partial_swap_output_after_address =
+    tailList(partial_swap_output_fields);
+  let partial_swap_output_value_map =
+    list_first_map(partial_swap_output_after_address);
+  assert(
+    valid_partial_swap_request(
+      partial_swap_io_ratio_numerator,
+      partial_swap_io_ratio_denominator,
+      partial_swap_hops,
+      partial_swap_minimum_swap_amount_required,
+      partial_swap_total_swap_amount,
+      order_batcher_fee,
+      partial_swap_max_batcher_fee_each_time
+    )
+  );
+  let partial_swap_step_snapshot =
+    partial_swap_result_snapshot(
+      constr_fields_of,
+      constant_product_swap_out,
+      scaled_amount_from_option,
+      adjust_value_for_pair_delta,
+      order_input_value,
+      order_batcher_fee,
+      partial_swap_a_to_b,
+      partial_swap_total_swap_amount,
+      partial_swap_io_ratio_numerator,
+      partial_swap_io_ratio_denominator,
+      partial_swap_minimum_swap_amount_required,
+      partial_swap_output_value_map,
+      pool_asset_a,
+      pool_asset_b,
+      base_fee_a_numerator,
+      base_fee_b_numerator,
+      fee_sharing_option,
+      pool_snapshot_before_step
+    )
+  let [next_pool_datum_reserve_a << unIData, after_next_pool_datum_reserve_a] =
+    partial_swap_step_snapshot;
+  let [next_pool_datum_reserve_b << unIData, after_next_pool_datum_reserve_b] =
+    after_next_pool_datum_reserve_a;
+  let [next_pool_value_reserve_a << unIData, after_next_pool_value_reserve_a] =
+    after_next_pool_datum_reserve_b;
+  let [next_pool_value_reserve_b << unIData, after_next_pool_value_reserve_b] =
+    after_next_pool_value_reserve_a;
+  let [next_pool_total_liquidity << unIData, after_next_pool_total_liquidity] =
+    after_next_pool_value_reserve_b;
+  let [partial_swap_remaining_amount << unIData, after_partial_swap_remaining_amount] =
+    after_next_pool_total_liquidity;
+  let partial_swap_has_next_hop =
+    1 =i= list_first_constr_tag(after_partial_swap_remaining_amount);
+  assert(partial_swap_continuation_matches(
+    constr_fields_of,
+    resolve_output_datum_data,
+    assert_order_datum_shape,
+    matches_output_address_datum,
+    partial_swap_has_next_hop,
+    step_output_data,
+    datum_map,
+    order_input_address,
+    order_canceller_data,
+    refund_receiver_asset_data,
+    refund_receiver_datum_choice_data,
+    success_receiver_asset_data,
+    success_receiver_datum_choice_data,
+    order_lp_asset_data,
+    partial_swap_a_to_b,
+    partial_swap_remaining_amount,
+    partial_swap_io_ratio_numerator,
+    partial_swap_io_ratio_denominator,
+    partial_swap_hops,
+    partial_swap_minimum_swap_amount_required,
+    partial_swap_max_batcher_fee_each_time,
+    max_order_batcher_fee,
+    order_batcher_fee,
+    order_expiry_setting_data
+  ));
+  step_result_pair(
+    pool_snapshot_from_values(
+      next_pool_datum_reserve_a,
+      next_pool_datum_reserve_b,
+      next_pool_value_reserve_a,
+      next_pool_value_reserve_b,
+      next_pool_total_liquidity
+    ),
+    outputs_after_step
+  )
+}
+
+@captures 13;
+fn withdraw_imbalance_swap_adjustments(proportional_amount_pair, compute_quadratic_swap_delta, scaled_amount_from_option, constant_product_swap_out,
+  pool_datum_reserve_a, pool_datum_reserve_b, withdraw_imbalance_lp_burn_amount, pool_total_liquidity, withdraw_imbalance_ratio_asset_a,
+  withdraw_imbalance_ratio_asset_b, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option) {
+  let
+  withdraw_imbalance_withdrawn_amount_pair =
+    proportional_amount_pair(
+  pool_datum_reserve_a,
+  pool_datum_reserve_b,
+  withdraw_imbalance_lp_burn_amount,
+  pool_total_liquidity
+  );
+  let
+  withdraw_imbalance_pre_swap_asset_a_amount =
+    unIData(fstPair(
+  withdraw_imbalance_withdrawn_amount_pair));
+  let
+  withdraw_imbalance_pre_swap_asset_b_amount =
+    unIData(sndPair(
+  withdraw_imbalance_withdrawn_amount_pair));
+  let
+  post_withdrawal_datum_reserve_a =
+    pool_datum_reserve_a -
+  withdraw_imbalance_pre_swap_asset_a_amount;
+  let
+  post_withdrawal_datum_reserve_b =
+    pool_datum_reserve_b -
+  withdraw_imbalance_pre_swap_asset_b_amount;
+  let
+  withdraw_imbalance_asset_a_scaled_by_ratio_b = withdraw_imbalance_pre_swap_asset_a_amount * withdraw_imbalance_ratio_asset_b;
+  let
+  withdraw_imbalance_asset_b_scaled_by_ratio_a = withdraw_imbalance_pre_swap_asset_b_amount * withdraw_imbalance_ratio_asset_a;
+  !
+  (
+  if (
+  withdraw_imbalance_asset_b_scaled_by_ratio_a < withdraw_imbalance_asset_a_scaled_by_ratio_b) {
+    #
+    {
+      let
+      withdraw_imbalance_swapped_asset_a_amount =
+        compute_quadratic_swap_delta(
+      withdraw_imbalance_pre_swap_asset_a_amount,
+      withdraw_imbalance_pre_swap_asset_b_amount,
+      post_withdrawal_datum_reserve_a,
+      post_withdrawal_datum_reserve_b,
+      withdraw_imbalance_ratio_asset_a,
+      withdraw_imbalance_ratio_asset_b,
+      base_fee_a_numerator
+      );
+      mkCons(
+      iData(
+      scaled_amount_from_option(
+      withdraw_imbalance_swapped_asset_a_amount, base_fee_a_numerator, fee_sharing_option)),
+      mkCons(data(
+      0), mkCons(iData(
+      withdraw_imbalance_pre_swap_asset_a_amount -
+      withdraw_imbalance_swapped_asset_a_amount), mkCons(iData(
+      withdraw_imbalance_pre_swap_asset_b_amount + constant_product_swap_out(
+      post_withdrawal_datum_reserve_a, post_withdrawal_datum_reserve_b,
+      withdraw_imbalance_swapped_asset_a_amount, base_fee_a_numerator)),
+      list<data>[])))
+      )
+    }
+  } else {
+    #
+    !
+    (
+    if (
+    withdraw_imbalance_asset_a_scaled_by_ratio_b < withdraw_imbalance_asset_b_scaled_by_ratio_a) {
+      #
+      {
+        let
+        withdraw_imbalance_swapped_asset_b_amount =
+          compute_quadratic_swap_delta(
+        withdraw_imbalance_pre_swap_asset_b_amount,
+        withdraw_imbalance_pre_swap_asset_a_amount,
+        post_withdrawal_datum_reserve_b,
+        post_withdrawal_datum_reserve_a,
+        withdraw_imbalance_ratio_asset_b,
+        withdraw_imbalance_ratio_asset_a,
+        base_fee_b_numerator
+        );
+        mkCons(
+        data(
+        0),
+        mkCons(iData(scaled_amount_from_option(
+        withdraw_imbalance_swapped_asset_b_amount, base_fee_b_numerator,
+        fee_sharing_option)), mkCons(iData(withdraw_imbalance_pre_swap_asset_a_amount +
+        constant_product_swap_out(post_withdrawal_datum_reserve_b,
+        post_withdrawal_datum_reserve_a, withdraw_imbalance_swapped_asset_b_amount,
+        base_fee_b_numerator)), mkCons(iData(withdraw_imbalance_pre_swap_asset_b_amount -
+        withdraw_imbalance_swapped_asset_b_amount), list<data>[])))
+        )
+      }
+    } else {
+      #
+      (mkCons(
+      data(0),
+      mkCons(
+      data(0), mkCons(iData(
+      withdraw_imbalance_pre_swap_asset_a_amount), mkCons(iData(
+      withdraw_imbalance_pre_swap_asset_b_amount),
+      list<data>[])))
+      ))
+    }
+    )
+  }
+  )
+}
+@captures 30;
+fn withdraw_imbalance_result_snapshot(value_add, matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+  withdraw_imbalance_minimum_asset_a, withdraw_imbalance_asset_a_amount, withdraw_imbalance_asset_b_amount, withdraw_imbalance_killable,
+  order_input_value, order_batcher_fee, pool_lp_asset_policy_id, pool_lp_asset_name, pool_asset_a_policy_id, pool_asset_a_name,
+  pool_asset_b_policy_id, pool_asset_b_name, withdraw_imbalance_lp_burn_amount, success_receiver_asset_data, success_receiver_datum_choice_data,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, step_output_data, pool_datum_reserve_a, pool_datum_reserve_b,
+  pool_value_reserve_a, pool_value_reserve_b, pool_total_liquidity, withdraw_imbalance_fee_sharing_a, withdraw_imbalance_fee_sharing_b,
+  pool_snapshot_before_step) {
+  let withdraw_imbalance_succeeds =
+    withdraw_imbalance_minimum_asset_a <= withdraw_imbalance_asset_a_amount;
+  !
+  (
+    if (withdraw_imbalance_succeeds) {
+      #
+      {
+        let expected_step_output_value =
+          value_add(
+            value_add(
+              value_add(
+                value_add(order_input_value, 0x, 0x, 0 - order_batcher_fee),
+                pool_lp_asset_policy_id,
+                pool_lp_asset_name,
+                0 - withdraw_imbalance_lp_burn_amount
+              ),
+              pool_asset_a_policy_id,
+              pool_asset_a_name,
+              withdraw_imbalance_asset_a_amount
+            ),
+            pool_asset_b_policy_id,
+            pool_asset_b_name,
+            withdraw_imbalance_asset_b_amount
+          );
+        assert(
+          (
+            matches_output_address_value_datum(
+              success_receiver_asset_data,
+              success_receiver_datum_choice_data,
+              expected_step_output_value,
+              step_output_data
+            )
+          )
+        );
+        pool_snapshot_from_values(
+          pool_datum_reserve_a -
+          withdraw_imbalance_asset_a_amount -
+          withdraw_imbalance_fee_sharing_a,
+          pool_datum_reserve_b -
+          withdraw_imbalance_asset_b_amount -
+          withdraw_imbalance_fee_sharing_b,
+          pool_value_reserve_a -
+          withdraw_imbalance_asset_a_amount,
+          pool_value_reserve_b -
+          withdraw_imbalance_asset_b_amount,
+          pool_total_liquidity -
+          withdraw_imbalance_lp_burn_amount
+        )
+      }
+    } else {
+      #
+      {
+        assert(
+          (
+            and {
+              withdraw_imbalance_killable,
+              matches_output_address_value_datum(
+                refund_receiver_asset_data,
+                refund_receiver_datum_choice_data,
+                subtract_ada_amount(order_input_value, order_batcher_fee),
+                step_output_data
+              ),
+            }
+          )
+        );
+        pool_snapshot_before_step
+      }
+    }
+  )
+}
+@captures 3;
+fn positive_imbalance_request(ratio_asset_a, ratio_asset_b, minimum_asset_a) {
+  and {
+    0 < ratio_asset_a,
+    0 < ratio_asset_b,
+    0 < minimum_asset_a,
+  }
+}
+
+@captures 1;
+fn positive_lp_burn_amount(lp_burn_amount) {
+  0 < lp_burn_amount
+}
+
+@captures 27;
+fn apply_withdraw_imbalance_step(constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount, value_add, proportional_amount_pair,
+  compute_quadratic_swap_delta, scaled_amount_from_option, constant_product_swap_out, matches_output_address_value_datum, subtract_ada_amount,
+  pool_snapshot_from_values, order_step_data, outputs_remaining, order_input_value, refund_receiver_asset_data, refund_receiver_datum_choice_data,
+  success_receiver_asset_data, success_receiver_datum_choice_data, pool_asset_a, pool_asset_b, pool_lp_asset, order_batcher_fee,
+  base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step) {
+  let withdraw_imbalance_fields = constr_fields_of(order_step_data);
+  let [withdraw_imbalance_lp_amount_option_data, withdraw_imbalance_after_lp_amount_option] =
+    withdraw_imbalance_fields;
+  let [withdraw_imbalance_ratio_asset_a << unIData, withdraw_imbalance_after_ratio_asset_a] =
+    withdraw_imbalance_after_lp_amount_option;
+  let [withdraw_imbalance_ratio_asset_b << unIData, withdraw_imbalance_after_ratio_asset_b] =
+    withdraw_imbalance_after_ratio_asset_a;
+  let [withdraw_imbalance_minimum_asset_a << unIData, withdraw_imbalance_after_minimum_asset_a] =
+    withdraw_imbalance_after_ratio_asset_b;
+  let withdraw_imbalance_killable =
+    1 =i= list_first_constr_tag(withdraw_imbalance_after_minimum_asset_a);
+  let [step_output_data, outputs_after_step] =
+    outputs_remaining;
+  assert(positive_imbalance_request(
+    withdraw_imbalance_ratio_asset_a,
+    withdraw_imbalance_ratio_asset_b,
+    withdraw_imbalance_minimum_asset_a
+  ));
+  step_result_pair(
+  {
+    let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+      pool_snapshot_before_step;
+    let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+      after_pool_datum_reserve_a;
+    let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+      after_pool_datum_reserve_b;
+    let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+      after_pool_value_reserve_a;
+    let pool_total_liquidity =
+      list_first_int(after_pool_value_reserve_b);
+    let pool_asset_a_fields =
+      constr_fields_of(pool_asset_a);
+    let [pool_asset_a_policy_id << unBData, after_pool_asset_a_policy_id] =
+      pool_asset_a_fields;
+    let pool_asset_a_name =
+      list_first_bytes(after_pool_asset_a_policy_id);
+    let pool_asset_b_fields =
+      constr_fields_of(pool_asset_b);
+    let [pool_asset_b_policy_id << unBData, after_pool_asset_b_policy_id] =
+      pool_asset_b_fields;
+    let pool_asset_b_name =
+      list_first_bytes(after_pool_asset_b_policy_id);
+    let pool_lp_asset_fields =
+      constr_fields_of(pool_lp_asset);
+    let [pool_lp_asset_policy_id << unBData, after_pool_lp_asset_policy_id] =
+      pool_lp_asset_fields;
+    let pool_lp_asset_name =
+      list_first_bytes(after_pool_lp_asset_policy_id);
+    let withdraw_imbalance_lp_burn_amount =
+      resolve_lp_burn_amount(
+        constr_tag_of, constr_fields_of, value_token_amount, order_input_value,
+        pool_lp_asset_policy_id, pool_lp_asset_name, withdraw_imbalance_lp_amount_option_data
+      );
+    assert(positive_lp_burn_amount(withdraw_imbalance_lp_burn_amount));
+    let withdraw_imbalance_adjustments =
+      withdraw_imbalance_swap_adjustments(
+        proportional_amount_pair,
+        compute_quadratic_swap_delta,
+        scaled_amount_from_option,
+        constant_product_swap_out,
+        pool_datum_reserve_a,
+        pool_datum_reserve_b,
+        withdraw_imbalance_lp_burn_amount,
+        pool_total_liquidity,
+        withdraw_imbalance_ratio_asset_a,
+        withdraw_imbalance_ratio_asset_b,
+        base_fee_a_numerator,
+        base_fee_b_numerator,
+        fee_sharing_option
+      )
+    let [withdraw_imbalance_fee_sharing_a << unIData, after_withdraw_imbalance_fee_sharing_a] =
+      withdraw_imbalance_adjustments;
+    let [withdraw_imbalance_fee_sharing_b << unIData, after_withdraw_imbalance_fee_sharing_b] =
+      after_withdraw_imbalance_fee_sharing_a;
+    let [withdraw_imbalance_asset_a_amount << unIData, after_withdraw_imbalance_asset_a] =
+      after_withdraw_imbalance_fee_sharing_b;
+    let withdraw_imbalance_asset_b_amount =
+      list_first_int(after_withdraw_imbalance_asset_a);
+    withdraw_imbalance_result_snapshot(
+      value_add,
+      matches_output_address_value_datum,
+      subtract_ada_amount,
+      pool_snapshot_from_values,
+      withdraw_imbalance_minimum_asset_a,
+      withdraw_imbalance_asset_a_amount,
+      withdraw_imbalance_asset_b_amount,
+      withdraw_imbalance_killable,
+      order_input_value,
+      order_batcher_fee,
+      pool_lp_asset_policy_id,
+      pool_lp_asset_name,
+      pool_asset_a_policy_id,
+      pool_asset_a_name,
+      pool_asset_b_policy_id,
+      pool_asset_b_name,
+      withdraw_imbalance_lp_burn_amount,
+      success_receiver_asset_data,
+      success_receiver_datum_choice_data,
+      refund_receiver_asset_data,
+      refund_receiver_datum_choice_data,
+      step_output_data,
+      pool_datum_reserve_a,
+      pool_datum_reserve_b,
+      pool_value_reserve_a,
+      pool_value_reserve_b,
+      pool_total_liquidity,
+      withdraw_imbalance_fee_sharing_a,
+      withdraw_imbalance_fee_sharing_b,
+      pool_snapshot_before_step
+    )
+  },
+  outputs_after_step
+  )
+}
+@captures 2;
+fn positive_donation_amounts(asset_a_amount, asset_b_amount) {
+  and {
+    0 <= asset_a_amount,
+    0 <= asset_b_amount,
+    0 < asset_a_amount + asset_b_amount,
+  }
+}
+
+@captures 11;
+fn apply_donation_step(constr_fields_of, value_token_amount, is_ada_asset, pool_snapshot_from_values, order_step_tag, order_input_value,
+  outputs_remaining, pool_asset_a, pool_asset_b, order_batcher_fee, pool_snapshot_before_step) {
+  assert(
+    (
+      10
+      =i=
+      order_step_tag
+    )
+  );
+  step_result_pair(
+  {
+    let [pool_datum_reserve_a << unIData, after_pool_datum_reserve_a] =
+      pool_snapshot_before_step;
+    let [pool_datum_reserve_b << unIData, after_pool_datum_reserve_b] =
+      after_pool_datum_reserve_a;
+    let [pool_value_reserve_a << unIData, after_pool_value_reserve_a] =
+      after_pool_datum_reserve_b;
+    let [pool_value_reserve_b << unIData, after_pool_value_reserve_b] =
+      after_pool_value_reserve_a;
+    let pool_total_liquidity =
+      list_first_int(after_pool_value_reserve_b);
+    let pool_asset_a_fields =
+      constr_fields_of(pool_asset_a);
+    let [pool_asset_a_policy_id << unBData, after_pool_asset_a_policy_id] =
+      pool_asset_a_fields;
+    let pool_asset_a_name =
+      list_first_bytes(after_pool_asset_a_policy_id);
+    let pool_asset_b_fields =
+      constr_fields_of(pool_asset_b);
+    let [pool_asset_b_policy_id << unBData, after_pool_asset_b_policy_id] =
+      pool_asset_b_fields;
+    let pool_asset_b_name =
+      list_first_bytes(after_pool_asset_b_policy_id);
+    let donation_input_asset_a_amount =
+      value_token_amount(
+        order_input_value,
+        pool_asset_a_policy_id,
+        pool_asset_a_name
+      );
+    let donation_asset_a_amount =
+      !
+    (
+    if (is_ada_asset(
+    pool_asset_a_policy_id,
+    pool_asset_a_name)) {
+      #donation_input_asset_a_amount - order_batcher_fee
+    } else {
+      #
+      {
+        let
+        donation_input_ada_amount =
+          value_token_amount(
+        order_input_value,
+        0x,
+        0x
+        );
+        assert(
+        (
+        order_batcher_fee
+        <=
+          donation_input_ada_amount
+        )
+        );
+        donation_input_asset_a_amount
+      }
+    }
+    );
+    let donation_asset_b_amount =
+      value_token_amount(
+        order_input_value,
+        pool_asset_b_policy_id,
+        pool_asset_b_name
+      );
+    assert(positive_donation_amounts(donation_asset_a_amount, donation_asset_b_amount));
+    pool_snapshot_from_values(
+    pool_datum_reserve_a +
+    donation_asset_a_amount,
+    pool_datum_reserve_b +
+    donation_asset_b_amount,
+    pool_value_reserve_a +
+    donation_asset_a_amount,
+    pool_value_reserve_b +
+    donation_asset_b_amount,
+    pool_total_liquidity
+    )
+  },
+  outputs_remaining
+  )
+}
+@captures 39;
+fn apply_deferred_pool_update_step(
+  constr_fields_of, constr_tag_of, list_first_constr_tag, resolve_output_datum_data,
+  assert_order_datum_shape, matches_output_address_datum, value_add, value_token_amount,
+  constant_product_swap_out, scaled_amount_from_option, proportional_amount_pair, adjust_value_for_pair_delta,
+  matches_output_address_value_datum, subtract_ada_amount, compute_quadratic_swap_delta, is_ada_asset,
+  datum_map, pool_asset_a, pool_asset_b, pool_lp_asset,
+  base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, order_step_data,
+  outputs_remaining, order_input_value, order_input_address, order_canceller_data,
+  refund_receiver_asset_data, refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data,
+  order_lp_asset_data, max_order_batcher_fee, order_expiry_setting_data, order_batcher_fee,
+  pool_snapshot_before_step, pool_snapshot_from_values, order_step_tag
+) {
+  !
+  (
+  if (7 =i= order_step_tag) {
+    #
+    apply_partial_swap_step(
+      constr_fields_of,
+      list_first_constr_tag,
+      resolve_output_datum_data,
+      assert_order_datum_shape,
+      matches_output_address_datum,
+      constant_product_swap_out,
+      scaled_amount_from_option,
+      adjust_value_for_pair_delta,
+      pool_snapshot_from_values,
+      order_step_data,
+      outputs_remaining,
+      order_input_value,
+      order_input_address,
+      order_canceller_data,
+      refund_receiver_asset_data,
+      refund_receiver_datum_choice_data,
+      success_receiver_asset_data,
+      success_receiver_datum_choice_data,
+      order_lp_asset_data,
+      max_order_batcher_fee,
+      order_expiry_setting_data,
+      pool_asset_a,
+      pool_asset_b,
+      order_batcher_fee,
+      base_fee_a_numerator,
+      base_fee_b_numerator,
+      fee_sharing_option,
+      datum_map,
+      pool_snapshot_before_step
+    )
+  } else {
+    #
+    !
+    (
+    if (8 =i= order_step_tag) {
+      #
+      apply_withdraw_imbalance_step(
+        constr_fields_of,
+        constr_tag_of,
+        list_first_constr_tag,
+        value_token_amount,
+        value_add,
+        proportional_amount_pair,
+        compute_quadratic_swap_delta,
+        scaled_amount_from_option,
+        constant_product_swap_out,
+        matches_output_address_value_datum,
+        subtract_ada_amount,
+        pool_snapshot_from_values,
+        order_step_data,
+        outputs_remaining,
+        order_input_value,
+        refund_receiver_asset_data,
+        refund_receiver_datum_choice_data,
+        success_receiver_asset_data,
+        success_receiver_datum_choice_data,
+        pool_asset_a,
+        pool_asset_b,
+        pool_lp_asset,
+        order_batcher_fee,
+        base_fee_a_numerator,
+        base_fee_b_numerator,
+        fee_sharing_option,
+        pool_snapshot_before_step
+      )
+    } else {
+      #
+      apply_donation_step(
+        constr_fields_of,
+        value_token_amount,
+        is_ada_asset,
+        pool_snapshot_from_values,
+        order_step_tag,
+        order_input_value,
+        outputs_remaining,
+        pool_asset_a,
+        pool_asset_b,
+        order_batcher_fee,
+        pool_snapshot_before_step
+      )
+    }
+    )
+  }
+  )
+}
+
+@captures 41;
+fn apply_pool_update_step(
+  constr_fields_of, constr_tag_of, list_first_constr_tag, resolve_output_datum_data,
+  assert_order_datum_shape, matches_output_address_datum, value_add, value_token_amount,
+  constant_product_swap_out, scaled_amount_from_option, proportional_amount_pair, adjust_value_for_pair_delta,
+  matches_output_address_value_datum, subtract_ada_amount, compute_quadratic_swap_delta, compute_quadratic_liquidity_pair,
+  scaled_amount_with_denominator, is_ada_asset, datum_map, pool_asset_a,
+  pool_asset_b, pool_lp_asset, base_fee_a_numerator, base_fee_b_numerator,
+  fee_sharing_option, order_step_data, outputs_remaining, order_input_value,
+  order_input_address, order_canceller_data, refund_receiver_asset_data, refund_receiver_datum_choice_data,
+  success_receiver_asset_data, success_receiver_datum_choice_data, order_lp_asset_data, max_order_batcher_fee,
+  order_expiry_setting_data, order_batcher_fee, pool_snapshot_before_step, pool_snapshot_from_values,
+  order_step_tag
+) {
+  !(
+    if (4 =i= order_step_tag) {
+      #apply_deposit_step(
+        constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount,
+        value_add, compute_quadratic_liquidity_pair, scaled_amount_with_denominator,
+        matches_output_address_value_datum, subtract_ada_amount, pool_snapshot_from_values,
+        order_step_data, outputs_remaining, order_input_value,
+        refund_receiver_asset_data, refund_receiver_datum_choice_data,
+        success_receiver_asset_data, success_receiver_datum_choice_data,
+        pool_asset_a, pool_asset_b, pool_lp_asset, order_batcher_fee,
+        base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+        pool_snapshot_before_step
+      )
+    } else {
+      #!(
+        if (5 =i= order_step_tag) {
+          #apply_withdraw_step(
+            constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount,
+            value_add, proportional_amount_pair, matches_output_address_value_datum,
+            subtract_ada_amount, pool_snapshot_from_values, order_step_data,
+            outputs_remaining, order_input_value, refund_receiver_asset_data,
+            refund_receiver_datum_choice_data, success_receiver_asset_data,
+            success_receiver_datum_choice_data, pool_asset_a, pool_asset_b,
+            pool_lp_asset, order_batcher_fee, pool_snapshot_before_step
+          )
+        } else {
+          #!(
+            if (6 =i= order_step_tag) {
+              #apply_zap_out_step(
+                constr_fields_of, constr_tag_of, list_first_constr_tag, value_token_amount,
+                value_add, proportional_amount_pair, scaled_amount_from_option,
+                constant_product_swap_out, matches_output_address_value_datum,
+                subtract_ada_amount, pool_snapshot_from_values, order_step_data,
+                outputs_remaining, order_input_value, refund_receiver_asset_data,
+                refund_receiver_datum_choice_data, success_receiver_asset_data,
+                success_receiver_datum_choice_data, pool_asset_a, pool_asset_b,
+                pool_lp_asset, order_batcher_fee, base_fee_a_numerator,
+                base_fee_b_numerator, fee_sharing_option, pool_snapshot_before_step
+              )
+            } else {
+              #apply_deferred_pool_update_step(
+                constr_fields_of, constr_tag_of, list_first_constr_tag,
+                resolve_output_datum_data, assert_order_datum_shape,
+                matches_output_address_datum, value_add, value_token_amount,
+                constant_product_swap_out, scaled_amount_from_option,
+                proportional_amount_pair, adjust_value_for_pair_delta,
+                matches_output_address_value_datum, subtract_ada_amount,
+                compute_quadratic_swap_delta, is_ada_asset, datum_map,
+                pool_asset_a, pool_asset_b, pool_lp_asset,
+                base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+                order_step_data, outputs_remaining, order_input_value,
+                order_input_address, order_canceller_data, refund_receiver_asset_data,
+                refund_receiver_datum_choice_data, success_receiver_asset_data,
+                success_receiver_datum_choice_data, order_lp_asset_data,
+                max_order_batcher_fee, order_expiry_setting_data, order_batcher_fee,
+                pool_snapshot_before_step, pool_snapshot_from_values, order_step_tag
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+}
+
+@captures 41;
+fn apply_current_order_step(
+  constr_fields_of, constr_tag_of, list_first_constr_tag, resolve_output_datum_data,
+  assert_order_datum_shape, matches_output_address_datum, value_add, value_token_amount,
+  constant_product_swap_out, scaled_amount_from_option, proportional_amount_pair, adjust_value_for_pair_delta,
+  matches_output_address_value_datum, subtract_ada_amount, compute_quadratic_swap_delta, compute_quadratic_liquidity_pair,
+  scaled_amount_with_denominator, apply_swap_step, is_ada_asset, datum_map,
+  pool_asset_a, pool_asset_b, pool_lp_asset, base_fee_a_numerator,
+  base_fee_b_numerator, fee_sharing_option, order_step_data, outputs_remaining,
+  order_input_value, order_input_address, order_canceller_data, refund_receiver_asset_data,
+  refund_receiver_datum_choice_data, success_receiver_asset_data, success_receiver_datum_choice_data, order_lp_asset_data,
+  max_order_batcher_fee, order_expiry_setting_data, order_batcher_fee, pool_snapshot_before_step,
+  pool_snapshot_from_values
+) {
+  let order_step_tag =
+    constr_tag_of(order_step_data);
+  !(
+    if (0 =i= order_step_tag) {
+      #apply_swap_exact_in_step(
+        constr_fields_of, list_first_constr_tag, apply_swap_step,
+        order_step_data, outputs_remaining, order_input_value,
+        refund_receiver_asset_data, refund_receiver_datum_choice_data,
+        success_receiver_asset_data, success_receiver_datum_choice_data,
+        pool_asset_a, pool_asset_b, order_batcher_fee,
+        base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+        pool_snapshot_before_step
+      )
+    } else {
+      #!(
+        if (1 =i= order_step_tag) {
+          #apply_stop_loss_step(
+            constr_fields_of, list_first_constr_tag, apply_swap_step,
+            order_step_data, outputs_remaining, order_input_value,
+            refund_receiver_asset_data, refund_receiver_datum_choice_data,
+            success_receiver_asset_data, success_receiver_datum_choice_data,
+            pool_asset_a, pool_asset_b, order_batcher_fee,
+            base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+            pool_snapshot_before_step
+          )
+        } else {
+          #!(
+            if (2 =i= order_step_tag) {
+              #apply_oco_step(
+                constr_fields_of, list_first_constr_tag, apply_swap_step,
+                order_step_data, outputs_remaining, order_input_value,
+                refund_receiver_asset_data, refund_receiver_datum_choice_data,
+                success_receiver_asset_data, success_receiver_datum_choice_data,
+                pool_asset_a, pool_asset_b, order_batcher_fee,
+                base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+                pool_snapshot_before_step
+              )
+            } else {
+              #!(
+                if (3 =i= order_step_tag) {
+                  #apply_swap_exact_out_step(
+                    constr_fields_of, list_first_constr_tag, asset_direction_context,
+                    scaled_amount_from_option, value_token_amount,
+                    adjust_value_for_pair_delta, matches_output_address_value_datum,
+                    subtract_ada_amount, pool_snapshot_from_values, order_step_data,
+                    outputs_remaining, pool_snapshot_before_step, pool_asset_a,
+                    pool_asset_b, base_fee_a_numerator, base_fee_b_numerator,
+                    fee_sharing_option, order_input_value, order_batcher_fee,
+                    refund_receiver_asset_data, refund_receiver_datum_choice_data,
+                    success_receiver_asset_data, success_receiver_datum_choice_data
+                  )
+                } else {
+                  #apply_pool_update_step(
+                    constr_fields_of, constr_tag_of, list_first_constr_tag,
+                    resolve_output_datum_data, assert_order_datum_shape,
+                    matches_output_address_datum, value_add, value_token_amount,
+                    constant_product_swap_out, scaled_amount_from_option,
+                    proportional_amount_pair, adjust_value_for_pair_delta,
+                    matches_output_address_value_datum, subtract_ada_amount,
+                    compute_quadratic_swap_delta, compute_quadratic_liquidity_pair,
+                    scaled_amount_with_denominator, is_ada_asset, datum_map,
+                    pool_asset_a, pool_asset_b, pool_lp_asset,
+                    base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option,
+                    order_step_data, outputs_remaining, order_input_value,
+                    order_input_address, order_canceller_data, refund_receiver_asset_data,
+                    refund_receiver_datum_choice_data, success_receiver_asset_data,
+                    success_receiver_datum_choice_data, order_lp_asset_data,
+                    max_order_batcher_fee, order_expiry_setting_data, order_batcher_fee,
+                    pool_snapshot_before_step, pool_snapshot_from_values, order_step_tag
+                  )
+                }
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+}
+
+@captures 28;
+fn apply_steps_template(constr_fields_of, constr_tag_of, list_first_constr_tag, data_pair_from_list, resolve_output_datum_data,
+  assert_order_datum_shape, matches_output_address_datum, matches_output_address_value_datum, value_add, value_token_amount, constant_product_swap_out,
+  scaled_amount_from_option, proportional_amount_pair, adjust_value_for_pair_delta, subtract_ada_amount, compute_quadratic_swap_delta,
+  compute_quadratic_liquidity_pair, scaled_amount_with_denominator, apply_swap_step, is_ada_asset, datum_map, current_time_approximation, pool_asset_a,
+  pool_asset_b, pool_lp_asset, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option, apply_steps, order_inputs_remaining, outputs_remaining,
+  order_fees_remaining, pool_snapshot_before_step) {
+  let [current_order_input, order_inputs_after_current] =
+    order_inputs_remaining;
+  let [order_batcher_fee << unIData, order_fees_after_current] =
+    order_fees_remaining;
+  let order_input_fields =
+    constr_fields_of(current_order_input);
+  let after_order_input_ref =
+    tailList(order_input_fields);
+  let order_input_resolved_output =
+    list_first(after_order_input_ref);
+  let order_input_output_fields =
+    constr_fields_of(order_input_resolved_output);
+  let [order_input_address, after_order_input_address] =
+    order_input_output_fields;
+  let [order_input_value << unMapData, after_order_input_value] =
+    after_order_input_address;
+  let order_input_datum_reference =
+    list_first(after_order_input_value);
+  let order_datum_data =
+    resolve_output_datum_data(datum_map, order_input_datum_reference);
+  let order_datum_shape_checked =
+    assert_order_datum_shape(order_datum_data);
+  let order_datum_fields =
+    constr_fields_of(order_datum_data);
+  let [order_canceller_data, after_order_canceller] =
+    order_datum_fields;
+  let [refund_receiver_asset_data, after_refund_receiver_asset] =
+    after_order_canceller;
+  let [refund_receiver_datum_choice_data, after_refund_receiver_datum_choice] =
+    after_refund_receiver_asset;
+  let [success_receiver_asset_data, after_success_receiver_asset] =
+    after_refund_receiver_datum_choice;
+  let [success_receiver_datum_choice_data, after_success_receiver_datum_choice] =
+    after_success_receiver_asset;
+  let [order_lp_asset_data, after_order_lp_asset] =
+    after_success_receiver_datum_choice;
+  let [order_step_data, after_order_step] =
+    after_order_lp_asset;
+  let [max_order_batcher_fee << unIData, after_max_order_batcher_fee] =
+    after_order_step;
+  let order_expiry_setting_data =
+    list_first(after_max_order_batcher_fee);
+  assert(
+    (
+      and {
+        0 < max_order_batcher_fee,
+        0 < order_batcher_fee,
+        order_batcher_fee <= max_order_batcher_fee,
+        pool_lp_asset =d= order_lp_asset_data,
+        {
+          let expiry_setting_tag =
+            constr_tag_of(order_expiry_setting_data);
+          or {
+            1 =i= expiry_setting_tag,
+            {
+              let expiry_setting_fields =
+                constr_fields_of(order_expiry_setting_data);
+              (
+                current_time_approximation <=
+                  unIData(fstPair({
+                    let expiry_time_pair_fields =
+                      list_first_list(expiry_setting_fields);
+                    data_pair_from_list(expiry_time_pair_fields)
+                  }))
+              )
+            },
+          }
+        },
+      }
+    )
+  );
+  let step_state_and_outputs_pair =
+    apply_current_order_step(
+      constr_fields_of, constr_tag_of, list_first_constr_tag, resolve_output_datum_data,
+      assert_order_datum_shape, matches_output_address_datum, value_add, value_token_amount,
+      constant_product_swap_out, scaled_amount_from_option, proportional_amount_pair,
+      adjust_value_for_pair_delta, matches_output_address_value_datum, subtract_ada_amount,
+      compute_quadratic_swap_delta, compute_quadratic_liquidity_pair,
+      scaled_amount_with_denominator, apply_swap_step, is_ada_asset, datum_map,
+      pool_asset_a, pool_asset_b, pool_lp_asset, base_fee_a_numerator,
+      base_fee_b_numerator, fee_sharing_option, order_step_data, outputs_remaining,
+      order_input_value, order_input_address, order_canceller_data,
+      refund_receiver_asset_data, refund_receiver_datum_choice_data,
+      success_receiver_asset_data, success_receiver_datum_choice_data,
+      order_lp_asset_data, max_order_batcher_fee, order_expiry_setting_data,
+      order_batcher_fee, pool_snapshot_before_step, pool_snapshot_from_values
+    );
+  let next_pool_snapshot =
+    unListData(fstPair(step_state_and_outputs_pair));
+  let outputs_after_current_step =
+    unListData(sndPair(step_state_and_outputs_pair));
+  !(chooseList(
+    order_inputs_after_current,
+    #next_pool_snapshot,
+    #apply_steps(
+      apply_steps,
+      order_inputs_after_current,
+      outputs_after_current_step,
+      order_fees_after_current,
+      next_pool_snapshot
+    )
+  ))
+}
+
+@captures 4;
+fn build_step_datum_template(build_pool_state_datum, stake_credential_data, constr_fields_of, pool_policy_id, pool_input_info_data,
+  pool_output_data, volatility_fee_data) {
+  build_pool_state_datum(stake_credential_data, list_second(constr_fields_of(pool_input_info_data)),
+    pool_output_data, pool_policy_id, True, volatility_fee_data)
+}
+
+@captures 1;
+fn map_step_datums_template(build_step_datum, map_step_datums, pool_input_infos, pool_outputs, route_volatility_fees) {
+  let [current_pool_input_info, remaining_pool_input_infos] =
+    pool_input_infos;
+  let [current_pool_output, remaining_pool_outputs] =
+    pool_outputs;
+  let [pool_volatility_fee, remaining_route_volatility_fees] =
+    route_volatility_fees;
+  !
+  (
+    if (listData(remaining_pool_input_infos) =d= data([])) {
+      #
+      {
+        assert(
+        (
+        and {
+          data([]) =d= listData(remaining_pool_outputs),
+          data([]) =d= listData(remaining_route_volatility_fees),
+        }
+        )
+        );
+        mkCons(build_step_datum(current_pool_input_info, current_pool_output, pool_volatility_fee), list<data>[])
+      }
+    } else {
+      #
+      (mkCons(build_step_datum(current_pool_input_info, current_pool_output,
+      pool_volatility_fee), map_step_datums(map_step_datums, remaining_pool_input_infos,
+      remaining_pool_outputs, remaining_route_volatility_fees)))
+    }
+  )
+}
+
+
+@captures 4;
+fn validate_step_outputs_template(constr_fields_of, list_first_constr_tag, constant_product_swap_out, scaled_amount_from_option,
+  validate_step_outputs, swap_input_amount, batch_step_datums, route_pool_steps) {
+  let [batch_step_datum, remaining_batch_step_datums] =
+    batch_step_datums;
+  let [route_pool_step, remaining_route_pool_steps] =
+    route_pool_steps;
+  let step_output_amount =
+    {
+    let batch_step_fields =
+      constr_fields_of(batch_step_datum);
+    let after_step_asset_a =
+      tailList(batch_step_fields);
+    let after_step_asset_b =
+      tailList(after_step_asset_a);
+    let [step_lp_asset, after_step_lp_asset] =
+      after_step_asset_b;
+    let [base_fee_a_numerator << unIData, after_base_fee_a] =
+      after_step_lp_asset;
+    let [base_fee_b_numerator << unIData, after_base_fee_b] =
+      after_base_fee_a;
+    let [fee_sharing_option, after_fee_sharing] =
+      after_base_fee_b;
+    let [input_pool_snapshot << unListData, after_input_pool_snapshot] =
+      after_fee_sharing;
+    let output_pool_snapshot =
+      list_first_list(after_input_pool_snapshot);
+    let [input_reserve_a << unIData, after_input_reserve_a] =
+      input_pool_snapshot;
+    let [input_reserve_b << unIData, after_input_reserve_b] =
+      after_input_reserve_a;
+    let [input_value_a << unIData, after_input_value_a] =
+      after_input_reserve_b;
+    let input_value_b =
+      list_first_int(after_input_value_a);
+    let [output_reserve_a << unIData, after_output_reserve_a] =
+      output_pool_snapshot;
+    let [output_reserve_b << unIData, after_output_reserve_b] =
+      after_output_reserve_a;
+    let [output_value_a << unIData, after_output_value_a] =
+      after_output_reserve_b;
+    let output_value_b =
+      list_first_int(after_output_value_a);
+    let route_pool_step_fields =
+      constr_fields_of(route_pool_step);
+    let [route_pool_lp_asset, route_pool_step_tail] =
+      route_pool_step_fields;
+    let swap_asset_a_to_b =
+      1 =i= list_first_constr_tag(route_pool_step_tail);
+    assert(step_lp_asset =d= route_pool_lp_asset);
+    let swap_context =
+      !
+    (
+      if (swap_asset_a_to_b) {
+        #
+        (mkCons(
+        iData(input_reserve_a),
+        mkCons(iData(input_reserve_b), mkCons(iData(base_fee_a_numerator), list<data>[]))
+        ))
+      } else {
+        #
+        (mkCons(
+        iData(input_reserve_b),
+        mkCons(iData(input_reserve_a), mkCons(iData(base_fee_b_numerator), list<data>[]))
+        ))
+      }
+    );
+    let [swap_input_reserve << unIData, after_swap_input_reserve] =
+      swap_context;
+    let [swap_output_reserve << unIData, after_swap_output_reserve] =
+      after_swap_input_reserve;
+    let swap_fee_numerator =
+      list_first_int(after_swap_output_reserve);
+    assert(0 < swap_input_amount);
+    let swap_output_amount =
+      constant_product_swap_out(swap_input_reserve, swap_output_reserve, swap_input_amount, swap_fee_numerator);
+    let fee_sharing_input_amount =
+      scaled_amount_from_option(swap_input_amount, swap_fee_numerator, fee_sharing_option);
+    assert(0 < swap_output_amount);
+    assert(
+      !if (swap_asset_a_to_b) { #(and { input_reserve_a + swap_input_amount - fee_sharing_input_amount =i=
+            output_reserve_a, input_reserve_b - swap_output_amount =i= output_reserve_b, input_value_a +
+          swap_input_amount =i= output_value_a, input_value_b - swap_output_amount =i= output_value_b }) } else {
+        #(and { input_reserve_a - swap_output_amount =i= output_reserve_a, input_reserve_b + swap_input_amount -
+          fee_sharing_input_amount =i= output_reserve_b, input_value_a - swap_output_amount =i= output_value_a,
+          input_value_b + swap_input_amount =i= output_value_b }) }
+    );
+    swap_output_amount
+  };
+  !
+  (chooseList(remaining_batch_step_datums, #step_output_amount, #validate_step_outputs(
+    validate_step_outputs, step_output_amount, remaining_batch_step_datums,
+    remaining_route_pool_steps)))
+}

@@ -1,0 +1,696 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/value_helpers";
+
+@captures 2;
+fn asset_pair_lex_before_projected_pair(asset_fields_projector, right_asset_pair, left_asset_fields) {
+  let [left_policy_id << unBData, left_asset_tail] =
+    left_asset_fields;
+  let left_token_name =
+    list_first_bytes(left_asset_tail);
+  let right_asset_fields =
+    asset_fields_projector(right_asset_pair);
+  let [right_policy_id << unBData, right_asset_tail] =
+    right_asset_fields;
+  let right_token_name =
+    list_first_bytes(right_asset_tail);
+  !if (left_policy_id =b= right_policy_id) { #(left_token_name <b< right_token_name) } else { #(left_policy_id <b< right_policy_id) }
+}
+
+@captures 4;
+fn compute_lp_name(first_asset_policy_id, first_asset_token_name, second_asset_policy_id, second_asset_token_name) {
+  let hash_bytes =
+    sha3_hash_bytes;
+  let concat_bytes =
+    append_bytes;
+  hash_bytes(
+    concat_bytes(
+      hash_bytes(concat_bytes(first_asset_policy_id, first_asset_token_name)),
+      hash_bytes(concat_bytes(second_asset_policy_id, second_asset_token_name))
+    )
+  )
+}
+
+@captures 2;
+fn validate_asset_pair_data(constr_tag_of, constr_fields_of, asset_pair) {
+  let asset_pair_tag =
+    constr_tag_of(asset_pair);
+  assert(0 =i= asset_pair_tag);
+  let asset_pair_fields =
+    constr_fields_of(asset_pair);
+  let [asset_policy_id << unBData, asset_pair_tail] =
+    asset_pair_fields;
+  let asset_token_name =
+    list_first_bytes(asset_pair_tail);
+  !
+    (chooseList(tailList(asset_pair_tail), #(), #error))
+}
+
+
+@captures 1;
+fn nonzero_amount_option(updated_asset_amount) {
+  !
+    (
+      if (updated_asset_amount =i= 0) {
+        #data(constr 1 [])
+      } else {
+        #
+          (constrData(
+            0,
+            mkCons(iData(updated_asset_amount), list<data>[])
+          ))
+      }
+    )
+}
+
+@captures 1;
+fn nonempty_asset_map_option(updated_asset_entries) {
+  !
+    (
+      if (!chooseList(updated_asset_entries, #True, #False)) {
+        #data(constr 1 [])
+      } else {
+        #
+          (constrData(
+            0,
+            mkCons(mapData(updated_asset_entries), list<data>[])
+          ))
+      }
+    )
+}
+
+@captures 4;
+fn add_asset_entry(constr_tag_of, compare_bytes_order, token_name, token_amount, insert_asset_entry, remaining_asset_entries) {
+  !
+    (chooseList(
+      remaining_asset_entries,
+      #mkCons(mkPairData(bData(token_name), iData(token_amount)), list<pair<data, data>>[]),
+      #
+        {
+          let [asset_entry, remaining_after_asset_entry] =
+            remaining_asset_entries;
+          let asset_entry_name =
+            unBData(fstPair(asset_entry));
+          let asset_entry_amount =
+            unIData(sndPair(asset_entry));
+          !
+            (
+              if (compare_bytes_order(token_name, asset_entry_name) =d= data(constr 0 [])) {
+                #
+                  (mkCons(
+                    mkPairData(bData(token_name), iData(token_amount)),
+                    remaining_asset_entries
+                  ))
+              } else {
+                #
+                  !
+                    (
+                      if (token_name =b= asset_entry_name) {
+                        #
+                          {
+                            let updated_asset_amount_option =
+                              {
+                                let updated_asset_amount = asset_entry_amount + token_amount;
+                                nonzero_amount_option(updated_asset_amount)
+                              };
+                            let updated_asset_amount_tag =
+                              constr_tag_of(updated_asset_amount_option);
+                            !
+                              (
+                                if (0 =i= updated_asset_amount_tag) {
+                                  #
+                                    (mkCons(
+                                      mkPairData(bData(token_name), constr_first_field(updated_asset_amount_option)),
+                                      remaining_after_asset_entry
+                                    ))
+                                } else {
+                                  #remaining_after_asset_entry
+                                }
+                              )
+                          }
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(asset_entry_name), iData(asset_entry_amount)),
+                            insert_asset_entry(insert_asset_entry, remaining_after_asset_entry)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 2;
+fn assert_sorted_asset_entries(constr_tag_of, compare_bytes_order, check_sorted_assets, remaining_asset_entries) {
+  !
+    (chooseList(
+      remaining_asset_entries,
+      #(),
+      #
+        {
+          let after_first_asset_entry =
+            tailList(remaining_asset_entries);
+          !
+            (chooseList(
+              after_first_asset_entry,
+              #(),
+              #
+                {
+                  let first_asset_entry =
+                    list_first(remaining_asset_entries);
+                  let [second_asset_entry, after_second_asset_entry] =
+                    after_first_asset_entry;
+                  let first_asset_name =
+                    unBData(fstPair(first_asset_entry));
+                  let second_asset_name =
+                    unBData(fstPair(second_asset_entry));
+                  let asset_order =
+                    compare_bytes_order(first_asset_name, second_asset_name);
+                  let asset_order_tag =
+                    constr_tag_of(asset_order);
+                  assert(0 =i= asset_order_tag);
+                  check_sorted_assets(check_sorted_assets, mkCons(second_asset_entry, after_second_asset_entry))
+                }
+            ))
+        }
+    ))
+}
+
+@captures 1;
+fn find_policy_entry_template(policy_id, find_policy_entry, remaining_policies) {
+  !
+    (chooseList(
+      remaining_policies,
+      #data(constr 1 []),
+      #
+        {
+          let [policy_entry, remaining_after_policy] =
+            remaining_policies;
+          let policy_entry_id =
+            unBData(fstPair(policy_entry));
+          let policy_entry_assets =
+            unMapData(sndPair(policy_entry));
+          !
+            (
+              if (policy_id =b= policy_entry_id) {
+                #
+                  (constrData(0, mkCons(mapData(policy_entry_assets), list<data>[])))
+              } else {
+                #
+                  (find_policy_entry(find_policy_entry, remaining_after_policy))
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn find_asset_entry_template(token_name, find_asset_entry, remaining_assets) {
+  !
+    (chooseList(
+      remaining_assets,
+      #data(constr 1 []),
+      #
+        {
+          let [asset_entry, remaining_after_asset] =
+            remaining_assets;
+          let asset_entry_name =
+            unBData(fstPair(asset_entry));
+          let asset_entry_amount =
+            unIData(sndPair(asset_entry));
+          !
+            (
+              if (token_name =b= asset_entry_name) {
+                #
+                  (constrData(0, mkCons(iData(asset_entry_amount), list<data>[])))
+              } else {
+                #
+                  (find_asset_entry(find_asset_entry, remaining_after_asset))
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn map_contains_data_key_template(_capture, map_entries, target_key) {
+  zcom fn (walk_entries, remaining_entries) {
+    !
+      (chooseList(
+        remaining_entries,
+        #False,
+        #
+          {
+            let [map_entry, remaining_entries_tail] =
+              remaining_entries;
+            let entry_key =
+              fstPair(map_entry);
+            or { target_key =d= entry_key, walk_entries(walk_entries, remaining_entries_tail) }
+          }
+      ))
+  }(map_entries)
+}
+
+@captures 7;
+fn resolve_route_input_amount(
+  constr_tag_of, constr_fields_of, value_token_amount, route_input_amount_option,
+  order_input_value, order_input_asset_policy_id, order_input_asset_name
+) {
+  let route_input_amount_option_tag =
+    constr_tag_of(route_input_amount_option);
+  !
+  (
+    if (0 =i= route_input_amount_option_tag) {
+      #
+      list_first_int(constr_fields_of(route_input_amount_option))
+    } else {
+      #
+      {
+        let route_input_amount_option_fields =
+          constr_fields_of(route_input_amount_option);
+        let excluded_route_input_amount =
+          list_first_int(route_input_amount_option_fields);
+        assert(0 <= excluded_route_input_amount);
+        value_token_amount(
+          order_input_value,
+          order_input_asset_policy_id,
+          order_input_asset_name
+        ) - excluded_route_input_amount
+      }
+    }
+  )
+}
+
+@captures 9;
+fn route_terminal_value(
+  value_add, order_input_value, order_batcher_fee, order_input_asset_policy_id,
+  order_input_asset_name, route_input_amount, order_output_asset_policy_id, order_output_asset_name,
+  computed_route_output_amount
+) {
+  value_add(value_add(value_add(order_input_value, 0x, 0x, 0 - order_batcher_fee), order_input_asset_policy_id,
+  order_input_asset_name, 0 - route_input_amount), order_output_asset_policy_id, order_output_asset_name,
+  computed_route_output_amount)
+}
+
+@captures 1;
+fn value_without_ada_is_empty(value_entries) {
+  (mapData(
+    {
+      let remove_ada_policy_entries =
+        remove_ada_entries_template(());
+      remove_ada_policy_entries(remove_ada_policy_entries, value_entries)
+    }
+  ))
+  =d=
+    data({})
+}
+
+@captures 1;
+fn remove_ada_entries_template(_capture, remove_ada_policy_entries, remaining_value_entries) {
+  !
+    (chooseList(
+      remaining_value_entries,
+      #list<pair<data, data>>[],
+      #
+        {
+          let [value_entry, remaining_value_entries_tail] =
+            remaining_value_entries;
+          let policy_id =
+            unBData(fstPair(value_entry));
+          let policy_assets =
+            unMapData(sndPair(value_entry));
+          !
+            (
+              if (0x =b= policy_id) {
+                #remaining_value_entries_tail
+              } else {
+                #
+                  (mkCons(
+                    mkPairData(bData(policy_id), mapData(policy_assets)),
+                    remove_ada_policy_entries(remove_ada_policy_entries, remaining_value_entries_tail)
+                  ))
+              }
+            )
+        }
+    ))
+}
+
+@captures 4;
+fn prepend_policy_entry_when_option_some(policy_id, option_fields_projector, option_value, remaining_value_entries, option_tag) {
+  !
+    (if (0 =i= option_tag) { #mkCons(mkPairData(bData(policy_id), list_first(option_fields_projector(option_value))), remaining_value_entries) } else {
+      #remaining_value_entries })
+}
+
+@captures 3;
+fn insert_singleton_asset(compare_bytes_order, value_token_name, value_amount, insert_asset_entry, asset_entries) {
+  !
+    (chooseList(
+      asset_entries,
+      #mkCons(mkPairData(bData(value_token_name), iData(value_amount)), list<pair<data, data>>[]),
+      #
+        {
+          let [asset_entry, remaining_asset_entries] =
+            asset_entries;
+          let asset_entry_name =
+            unBData(fstPair(asset_entry));
+          let asset_entry_amount =
+            unIData(sndPair(asset_entry));
+          !
+            (
+              if (compare_bytes_order(value_token_name, asset_entry_name) =d= data(constr 0 [])) {
+                #
+                  (mkCons(mkPairData(bData(value_token_name), iData(value_amount)), asset_entries))
+              } else {
+                #
+                  !
+                    (
+                      if (value_token_name =b= asset_entry_name) {
+                        #
+                          (mkCons(mkPairData(bData(value_token_name), iData(value_amount)), remaining_asset_entries))
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(asset_entry_name), iData(asset_entry_amount)),
+                            insert_asset_entry(insert_asset_entry, remaining_asset_entries)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 3;
+fn insert_singleton_policy(compare_bytes_order, value_policy_id, singleton_asset_map, insert_policy_entry, value_entries) {
+  !
+    (chooseList(
+      value_entries,
+      #mkCons(mkPairData(bData(value_policy_id), mapData(singleton_asset_map)), list<pair<data, data>>[]),
+      #
+        {
+          let [value_entry, remaining_value_entries] =
+            value_entries;
+          let value_entry_policy =
+            unBData(fstPair(value_entry));
+          let value_entry_assets =
+            unMapData(sndPair(value_entry));
+          !
+            (
+              if (compare_bytes_order(value_policy_id, value_entry_policy) =d= data(constr 0 [])) {
+                #
+                  (mkCons(mkPairData(bData(value_policy_id), mapData(singleton_asset_map)), value_entries))
+              } else {
+                #
+                  !
+                    (
+                      if (value_policy_id =b= value_entry_policy) {
+                        #
+                          (mkCons(mkPairData(bData(value_policy_id), mapData(singleton_asset_map)), remaining_value_entries))
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(value_entry_policy), mapData(value_entry_assets)),
+                            insert_policy_entry(insert_policy_entry, remaining_value_entries)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 7;
+fn insert_value_policy(constr_tag_of, constr_fields_of, compare_bytes_order, policy_id, token_name, token_amount, singleton_asset_entries, insert_policy_entry,
+  remaining_value_entries) {
+  !
+    (chooseList(
+      remaining_value_entries,
+      #mkCons(mkPairData(bData(policy_id), mapData(singleton_asset_entries)), list<pair<data, data>>[]),
+      #
+        {
+          let [value_entry, remaining_after_value_entry] =
+            remaining_value_entries;
+          let value_entry_policy_id =
+            unBData(fstPair(value_entry));
+          let value_entry_assets =
+            unMapData(sndPair(value_entry));
+          !
+            (
+              if (compare_bytes_order(policy_id, value_entry_policy_id) =d= data(constr 0 [])) {
+                #
+                  (mkCons(mkPairData(bData(policy_id), mapData(singleton_asset_entries)), remaining_value_entries))
+              } else {
+                #
+                  !
+                    (
+                      if (policy_id =b= value_entry_policy_id) {
+                        #
+                          {
+                            let updated_asset_map_option =
+                              {
+                                let updated_asset_entries =
+                                  {
+                                    let add_asset =
+                                      add_asset_entry(constr_tag_of, compare_bytes_order, token_name, token_amount);
+                                    add_asset(add_asset, value_entry_assets)
+                                  };
+                                nonempty_asset_map_option(updated_asset_entries)
+                              };
+                            prepend_policy_entry_when_option_some(policy_id, constr_fields_of, updated_asset_map_option, remaining_after_value_entry)(
+                              constr_tag_of(updated_asset_map_option)
+                            )
+                          }
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(value_entry_policy_id), mapData(value_entry_assets)),
+                            insert_policy_entry(insert_policy_entry, remaining_after_value_entry)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 3;
+fn make_add(constr_tag_of, constr_fields_of, compare_bytes_order, value_map, policy_id, token_name, token_amount) {
+  !
+    (
+      if (token_amount =i= 0) {
+        #value_map
+      } else {
+        #
+          {
+            let singleton_asset_entries =
+              {
+                let singleton_asset_entry =
+                  mkCons(
+                    mkPairData(bData(token_name), iData(token_amount)),
+                    list<pair<data, data>>[]
+                  );
+                let checked_singleton_asset_order =
+                  {
+                    let assert_asset_order =
+                      assert_sorted_asset_entries(constr_tag_of, compare_bytes_order);
+                    assert_asset_order(assert_asset_order, singleton_asset_entry)
+                  };
+                singleton_asset_entry
+              };
+            let insert_policy =
+              insert_value_policy(constr_tag_of, constr_fields_of, compare_bytes_order, policy_id, token_name, token_amount, singleton_asset_entries);
+            insert_policy(insert_policy, value_map)
+          }
+      }
+    )
+}
+
+@captures 2;
+fn make_amount(constr_tag_of, constr_fields_of, value_map, policy_id, token_name) {
+  let policy_lookup_option =
+    {
+      let find_policy_entry =
+        find_policy_entry_template(policy_id);
+      find_policy_entry(find_policy_entry, value_map)
+    };
+  let asset_lookup_option =
+    {
+      let policy_lookup_tag =
+        constr_tag_of(policy_lookup_option);
+      !
+        (
+          if (1 =i= policy_lookup_tag) {
+            #data(constr 1 [])
+          } else {
+            #
+              {
+                let asset_map =
+                  unMapData(constr_first_field(policy_lookup_option));
+                let find_asset_entry =
+                  find_asset_entry_template(token_name);
+                find_asset_entry(find_asset_entry, asset_map)
+              }
+          }
+        )
+    };
+  let asset_lookup_tag =
+    constr_tag_of(asset_lookup_option);
+  !
+    (if (1 =i= asset_lookup_tag) { #0 } else { #list_first_int(constr_fields_of(asset_lookup_option)) })
+}
+
+@captures 1;
+fn make_singleton(compare_bytes_order, value_policy_id, value_token_name, value_amount) {
+  !
+    (
+      if (value_amount =i= 0) {
+        #list<pair<data, data>>[]
+      } else {
+        #
+          {
+            let singleton_asset_map =
+              {
+                let insert_asset =
+                  insert_singleton_asset(compare_bytes_order, value_token_name, value_amount);
+                insert_asset(insert_asset, list<pair<data, data>>[])
+              };
+            let insert_policy =
+              insert_singleton_policy(compare_bytes_order, value_policy_id, singleton_asset_map);
+            insert_policy(insert_policy, list<pair<data, data>>[])
+          }
+      }
+    )
+}
+
+@captures 0;
+fn drop_policy_entries(value_map, policy_id) {
+  zcom fn (drop_policy, remaining_value_entries) {
+    !
+      (chooseList(
+        remaining_value_entries,
+        #list<pair<data, data>>[],
+        #
+          {
+            let [value_entry, remaining_after_entry] =
+              remaining_value_entries;
+            let value_entry_policy =
+              unBData(fstPair(value_entry));
+            let value_entry_assets =
+              unMapData(sndPair(value_entry));
+            !
+              (
+                if (policy_id =b= value_entry_policy) {
+                  #remaining_after_entry
+                } else {
+                  #
+                    (mkCons(mkPairData(bData(value_entry_policy), mapData(value_entry_assets)), drop_policy(drop_policy, remaining_after_entry)))
+                }
+              )
+          }
+      ))
+  }(value_map)
+}
+
+@captures 1;
+fn make_remove_ada(remove_policy_from_value, value_map) {
+  remove_policy_from_value(value_map, 0x)
+}
+
+
+@captures 1;
+fn make_unwrap_inline_datum(constr_tag_of, output_datum) {
+  let output_datum_tag =
+    constr_tag_of(output_datum);
+  assert(2 =i= output_datum_tag);
+  constr_first_field(output_datum)
+}
+
+@captures 1;
+fn find_input_by_ref(spending_input_ref, find_input, remaining_inputs) {
+  !
+    (chooseList(
+      remaining_inputs,
+      #data(constr 1 []),
+      #
+        {
+          let [candidate_input, remaining_input_tail] =
+            remaining_inputs;
+          !
+            (
+              if (constr_first_field(candidate_input) =d= spending_input_ref) {
+                #
+                  (constrData(0, mkCons(candidate_input, list<data>[])))
+              } else {
+                #
+                  (find_input(find_input, remaining_input_tail))
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn input_at_own_credential(own_spending_credential, candidate_input) {
+  own_spending_credential =d= constr_first_field(constr_first_field(constr_second_field(candidate_input)))
+}
+
+@captures 5;
+fn factory_continuation_output_matches(constr_fields_of, own_spending_credential, remove_ada_policy, value_singleton, factory_policy_id, candidate_output) {
+  let candidate_output_fields =
+    constr_fields_of(candidate_output);
+  let [candidate_output_address, candidate_output_after_address] =
+    candidate_output_fields;
+  let candidate_output_value =
+    list_first_map(candidate_output_after_address);
+  let candidate_output_address_fields =
+    constr_fields_of(candidate_output_address);
+  let candidate_output_credential =
+    list_first(candidate_output_address_fields);
+  and {
+    own_spending_credential =d= candidate_output_credential,
+    mapData(remove_ada_policy(candidate_output_value)) =d= mapData(value_singleton(factory_policy_id, 0x4d5346, 1))
+  }
+}
+
+@captures 5;
+fn pool_output_matches(constr_fields_of, constr_tag_of, value_amount, expected_pool_address, factory_policy_id, candidate_output) {
+  let candidate_output_fields =
+    constr_fields_of(candidate_output);
+  let [candidate_output_address, candidate_output_after_address] =
+    candidate_output_fields;
+  let candidate_output_value =
+    list_first_map(candidate_output_after_address);
+  let candidate_output_address_fields =
+    constr_fields_of(candidate_output_address);
+  let candidate_credential =
+    list_first(candidate_output_address_fields);
+  let candidate_credential_tag =
+    constr_tag_of(candidate_credential);
+  and {
+    1 =i= candidate_credential_tag,
+    expected_pool_address =d= candidate_output_address,
+    value_amount(candidate_output_value, factory_policy_id, 0x4d5350) =i= 1
+  }
+}
+
+@captures 1;
+fn integer_sqrt_iter(liquidity_product, iterate_sqrt, previous_guess, next_guess) {
+  !
+    (
+      if (next_guess < previous_guess) {
+        #
+          (iterate_sqrt(
+            iterate_sqrt,
+            next_guess,
+            (liquidity_product / next_guess + next_guess) / 2
+          ))
+      } else {
+        #previous_guess
+      }
+    )
+}

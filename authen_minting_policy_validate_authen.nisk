@@ -1,0 +1,848 @@
+program_name "authen_minting_policy_validate_authen";
+language plutus_v2;
+flat_hash "aa9baf2ad3c944aa105051a0bb2f1409cd784dbaeace334af1fadb602fb5b572";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root nullList, tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (authen_policy_data, authen_redeemer, script_context) {
+    !
+    (
+      if (0 =i= constr_tag_of(script_context)) {
+        #
+        {
+          let authen_redeemer_shape_checked =
+            {
+            let authen_redeemer_tag =
+              constr_tag_of(authen_redeemer);
+            !
+            (
+            if (0 =i= authen_redeemer_tag) {
+              #
+              !
+              (chooseList(constr_fields_of(authen_redeemer), #(), #error))
+            } else {
+              #
+              {
+                assert(1 =i= authen_redeemer_tag);
+                !
+                (chooseList(constr_fields_of(authen_redeemer), #(), #error))
+              }
+            }
+            )
+          };
+          !
+          (
+          if (
+          {
+            let script_context_fields =
+              constr_fields_of(script_context);
+            let tx_info_data =
+              list_first(script_context_fields);
+            let script_context_tail =
+              tailList(script_context_fields);
+            let script_purpose_data =
+              list_first(script_context_tail);
+            assert(0 =i= constr_tag_of(script_purpose_data));
+            let script_purpose_fields =
+              constr_fields_of(script_purpose_data);
+            let own_policy_id =
+              list_first_bytes(script_purpose_fields);
+            let authen_redeemer_tag =
+              constr_tag_of(authen_redeemer);
+            let remove_policy_from_value_entries =
+              drop_policy_entries;
+            let remove_ada_from_value_entries =
+              make_remove_ada(remove_policy_from_value_entries);
+            let value_token_amount =
+              make_amount(constr_tag_of, constr_fields_of);
+            let filter_data_list =
+              filter_data_list_worker;
+            let compare_bytes_as_ordering_data =
+              compare_bytes_ordering;
+            !
+            (
+            if (1 =i= authen_redeemer_tag) {
+              #
+              {
+                let tx_info_fields =
+                  constr_fields_of(tx_info_data);
+                let tx_inputs =
+                  list_first_list(tx_info_fields);
+                let after_tx_inputs =
+                  tailList(tx_info_fields);
+                let after_reference_inputs =
+                  tailList(after_tx_inputs);
+                let after_tx_outputs =
+                  tailList(after_reference_inputs);
+                let after_tx_fee =
+                  tailList(after_tx_outputs);
+                let tx_mint_value =
+                  list_first_map(after_tx_fee);
+                let after_tx_mint =
+                  tailList(after_tx_fee);
+                let after_dcerts =
+                  tailList(after_tx_mint);
+                let after_withdrawals =
+                  tailList(after_dcerts);
+                let after_valid_range =
+                  tailList(after_withdrawals);
+                let after_signatories =
+                  tailList(after_valid_range);
+                let tx_datum_map =
+                  list_first_map(after_signatories);
+                let factory_token_inputs =
+                  filter_data_list(
+                tx_inputs,
+                fn (candidate_input) {
+                  (
+                  (value_token_amount(
+                  unMapData(constr_second_field(constr_second_field(candidate_input))),
+                  own_policy_id,
+                  0x4d5346
+                  ))
+                  =i=
+                    1
+                  )
+                }
+                );
+                let selected_factory_input =
+                  list_first(factory_token_inputs);
+                !
+                (chooseList(
+                tailList(factory_token_inputs),
+                #
+                {
+                  let selected_input_fields =
+                    constr_fields_of(selected_factory_input);
+                  let selected_input_ref =
+                    list_first(selected_input_fields);
+                  let matching_tag_one_entries =
+                    {
+                    let filter_tagged_key_entries =
+                      filter_tagged_key_entries_template(constr_tag_of, constr_fields_of, selected_input_ref);
+                    filter_tagged_key_entries(filter_tagged_key_entries, tx_datum_map)
+                  };
+                  let matching_tag_one_entry =
+                    list_first(matching_tag_one_entries);
+                  !
+                  (chooseList(
+                  tailList(matching_tag_one_entries),
+                  #
+                  {
+                    let matching_asset_pair_data =
+                      sndPair(matching_tag_one_entry);
+                    let asset_pair_checked =
+                      {
+                      let assert_asset_class =
+                        assert_asset_class_template(constr_tag_of, constr_fields_of);
+                      let asset_pair_tag =
+                        constr_tag_of(matching_asset_pair_data);
+                      assert(0 =i= asset_pair_tag);
+                      let asset_pair_fields =
+                        constr_fields_of(matching_asset_pair_data);
+                      let first_asset =
+                        list_first(asset_pair_fields);
+                      let asset_pair_tail =
+                        tailList(asset_pair_fields);
+                      let second_asset =
+                        list_first(asset_pair_tail);
+                      !
+                      (chooseList(
+                      tailList(asset_pair_tail),
+                      #
+                      {
+                        let first_asset_checked =
+                          assert_asset_class(first_asset);
+                        let second_asset_checked =
+                          assert_asset_class(second_asset);
+                        ()
+                      },
+                      #error
+                      ))
+                    };
+                    let asset_pair_fields =
+                      constr_fields_of(matching_asset_pair_data);
+                    let first_asset =
+                      list_first(asset_pair_fields);
+                    let asset_pair_tail =
+                      tailList(asset_pair_fields);
+                    let second_asset =
+                      list_first(asset_pair_tail);
+                    let first_asset_fields =
+                      constr_fields_of(first_asset);
+                    let first_policy_id =
+                      list_first_bytes(first_asset_fields);
+                    let first_asset_tail =
+                      tailList(first_asset_fields);
+                    let first_token_name =
+                      list_first_bytes(first_asset_tail);
+                    let second_asset_fields =
+                      constr_fields_of(second_asset);
+                    let second_policy_id =
+                      list_first_bytes(second_asset_fields);
+                    let second_asset_tail =
+                      tailList(second_asset_fields);
+                    let second_token_name =
+                      list_first_bytes(second_asset_tail);
+                    assert(
+                    (asset_pair_lex_before_projected_pair(constr_fields_of, second_asset)(
+                    constr_fields_of(first_asset)
+                    ))
+                    );
+                    let pool_token_name_hash =
+                      {
+                      let hash_bytes =
+                        sha3_hash_bytes;
+                      let concat_bytes =
+                        append_bytes;
+                      hash_bytes(concat_bytes(
+                      hash_bytes(concat_bytes(first_policy_id, first_token_name)),
+                      hash_bytes(concat_bytes(second_policy_id, second_token_name))
+                      ))
+                    };
+                    (
+                    mapData(remove_ada_from_value_entries(tx_mint_value))
+                    =d=
+                      (mapData(
+                    {
+                      let value_add =
+                        make_add(constr_tag_of, constr_fields_of, compare_bytes_as_ordering_data);
+                      value_add(
+                      value_add(value_add(list<pair<data, data>>[], own_policy_id, 0x4d5346, 1), own_policy_id, 0x4d5350, 1),
+                      own_policy_id,
+                      pool_token_name_hash,
+                      9223372036854775807
+                      )
+                    }
+                    ))
+                    )
+                  },
+                  #error
+                  ))
+                },
+                #error
+                ))
+              }
+            } else {
+              #
+              {
+                let tx_info_fields =
+                  constr_fields_of(tx_info_data);
+                let tx_inputs =
+                  list_first_list(tx_info_fields);
+                let after_tx_inputs =
+                  tailList(tx_info_fields);
+                let after_reference_inputs =
+                  tailList(after_tx_inputs);
+                let tx_outputs =
+                  list_first_list(after_reference_inputs);
+                let after_tx_outputs =
+                  tailList(after_reference_inputs);
+                let after_tx_fee =
+                  tailList(after_tx_outputs);
+                let tx_mint_value =
+                  list_first_map(after_tx_fee);
+                let authen_policy_inputs =
+                  filter_data_list(
+                tx_inputs,
+                fn (candidate_input) {
+                  list_first(constr_fields_of(candidate_input)) =d= authen_policy_data
+                }
+                );
+                !
+                (chooseList(
+                tailList(authen_policy_inputs),
+                #
+                {
+                  let mint_value_without_ada =
+                    remove_ada_from_value_entries(tx_mint_value);
+                  assert(
+                  (
+                  and {
+                    (
+                    (
+                    fn (count_value_assets) {
+                      count_value_assets(count_value_assets)
+                    }
+                    (
+                    fn (count_value_assets, remaining_assets) {
+                      !
+                      (chooseList(
+                      remaining_assets,
+                      #0,
+                      #(1 + count_value_assets(count_value_assets, tailList(remaining_assets)))
+                      ))
+                    }
+                    )
+                    {
+                      let flatten_assets =
+                        flatten_assets_template(());
+                      flatten_assets(flatten_assets, mint_value_without_ada)
+                    }
+                    )
+                    =i=
+                      2
+                    ),
+                    value_token_amount(mint_value_without_ada, own_policy_id, 0x4d534753) =i= 1,
+                    value_token_amount(mint_value_without_ada, own_policy_id, 0x4d5346) =i= 1,
+                  }
+                  )
+                  );
+                  let value_singleton =
+                    make_singleton(compare_bytes_as_ordering_data);
+                  let remove_empty_policy_entries =
+                    make_remove_ada(remove_policy_from_value_entries);
+                  let factory_token_outputs =
+                    filter_data_list(
+                  tx_outputs,
+                  fn (candidate_output) {
+                    (
+                    mapData(remove_empty_policy_entries(unMapData(list_second(constr_fields_of(candidate_output)))))
+                    =d=
+                      (mapData(value_singleton(own_policy_id, 0x4d5346, 1)))
+                    )
+                  }
+                  );
+                  let selected_factory_output =
+                    list_first(factory_token_outputs);
+                  !
+                  (chooseList(
+                  tailList(factory_token_outputs),
+                  #
+                  {
+                    let selected_factory_output_fields =
+                      constr_fields_of(selected_factory_output);
+                    let after_output_address =
+                      tailList(selected_factory_output_fields);
+                    let after_output_value =
+                      tailList(after_output_address);
+                    let selected_output_datum =
+                      list_first(after_output_value);
+                    let inline_output_datum_data =
+                      inline_output_datum_data_template(constr_tag_of, constr_fields_of);
+                    let selected_output_datum_data =
+                      inline_output_datum_data(selected_output_datum);
+                    let selected_asset_checked =
+                      {
+                      let selected_asset_tag =
+                        constr_tag_of(selected_output_datum_data);
+                      assert(0 =i= selected_asset_tag);
+                      let selected_asset_fields =
+                        constr_fields_of(selected_output_datum_data);
+                      let selected_asset_policy_id =
+                        list_first_bytes(selected_asset_fields);
+                      let selected_asset_tail =
+                        tailList(selected_asset_fields);
+                      let selected_asset_token_name =
+                        list_first_bytes(selected_asset_tail);
+                      !
+                      (chooseList(tailList(selected_asset_tail), #(), #error))
+                    };
+                    let selected_asset_fields =
+                      constr_fields_of(selected_output_datum_data);
+                    let selected_asset_policy_id =
+                      list_first_bytes(selected_asset_fields);
+                    let selected_asset_tail =
+                      tailList(selected_asset_fields);
+                    let selected_asset_token_name =
+                      list_first_bytes(selected_asset_tail);
+                    let pool_policy_outputs =
+                      filter_data_list(
+                    tx_outputs,
+                    fn (candidate_output) {
+                      let candidate_output_fields =
+                        constr_fields_of(candidate_output);
+                      let candidate_address =
+                        list_first(candidate_output_fields);
+                      let candidate_address_fields =
+                        constr_fields_of(candidate_address);
+                      let candidate_payment_credential =
+                        list_first(candidate_address_fields);
+                      let candidate_payment_credential_tag =
+                        constr_tag_of(candidate_payment_credential);
+                      and {
+                        1 =i= candidate_payment_credential_tag,
+                        list_first_bytes(constr_fields_of(candidate_payment_credential)) =b= own_policy_id,
+                      }
+                    }
+                    );
+                    let selected_pool_output =
+                      list_first(pool_policy_outputs);
+                    !
+                    (chooseList(
+                    tailList(pool_policy_outputs),
+                    #
+                    {
+                      let selected_pool_output_fields =
+                        constr_fields_of(selected_pool_output);
+                      let after_pool_output_address =
+                        tailList(selected_pool_output_fields);
+                      let selected_pool_output_value =
+                        list_first_map(after_pool_output_address);
+                      let after_pool_output_value =
+                        tailList(after_pool_output_address);
+                      let selected_pool_output_datum =
+                        list_first(after_pool_output_value);
+                      let selected_pool_output_datum_data =
+                        inline_output_datum_data(selected_pool_output_datum);
+                      let output_datum_shape_checked =
+                        {
+                        let assert_choice_bytes =
+                          assert_choice_bytes_template(constr_tag_of, constr_fields_of);
+                        let output_datum_tag =
+                          constr_tag_of(selected_pool_output_datum_data);
+                        assert(0 =i= output_datum_tag);
+                        let output_datum_fields =
+                          constr_fields_of(selected_pool_output_datum_data);
+                        let choice_list =
+                          list_first_list(output_datum_fields);
+                        let choice_tail =
+                          tailList(output_datum_fields);
+                        let first_choice =
+                          list_first(choice_tail);
+                        let second_tail =
+                          tailList(choice_tail);
+                        let second_choice =
+                          list_first(second_tail);
+                        let third_tail =
+                          tailList(second_tail);
+                        let third_choice =
+                          list_first(third_tail);
+                        let fourth_tail =
+                          tailList(third_tail);
+                        let fourth_choice =
+                          list_first(fourth_tail);
+                        let fifth_tail =
+                          tailList(fourth_tail);
+                        let fifth_choice =
+                          list_first(fifth_tail);
+                        !
+                        (chooseList(
+                        tailList(fifth_tail),
+                        #
+                        {
+                          let choice_list_checked =
+                            {
+                            let assert_choice_list =
+                              assert_choice_list_template(assert_choice_bytes);
+                            assert_choice_list(assert_choice_list, choice_list)
+                          };
+                          let first_choice_checked =
+                            assert_choice_bytes(first_choice);
+                          let second_choice_checked =
+                            assert_choice_bytes(second_choice);
+                          let third_choice_checked =
+                            assert_choice_bytes(third_choice);
+                          let fourth_choice_checked =
+                            assert_choice_bytes(fourth_choice);
+                          let fifth_choice_checked =
+                            assert_choice_bytes(fifth_choice);
+                          ()
+                        },
+                        #error
+                        ))
+                      };
+                      and {
+                        selected_asset_policy_id =b= 0x00,
+                        (
+                        selected_asset_token_name
+                        =b=
+                          0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00
+                        ),
+                        {
+                          let choice_has_policy_id_length =
+                            choice_has_policy_id_length_template(constr_tag_of, constr_fields_of);
+                          let output_datum_fields =
+                            constr_fields_of(selected_pool_output_datum_data);
+                          let choice_list =
+                            list_first_list(output_datum_fields);
+                          let choice_tail =
+                            tailList(output_datum_fields);
+                          let first_choice =
+                            list_first(choice_tail);
+                          let second_tail =
+                            tailList(choice_tail);
+                          let second_choice =
+                            list_first(second_tail);
+                          let third_tail =
+                            tailList(second_tail);
+                          let third_choice =
+                            list_first(third_tail);
+                          let fourth_tail =
+                            tailList(third_tail);
+                          let fourth_choice =
+                            list_first(fourth_tail);
+                          let fifth_tail =
+                            tailList(fourth_tail);
+                          let fifth_choice =
+                            list_first(fifth_tail);
+                          and {
+                            choice_has_policy_id_length(first_choice),
+                            choice_has_policy_id_length(second_choice),
+                            choice_has_policy_id_length(third_choice),
+                            choice_has_policy_id_length(fourth_choice),
+                            choice_has_policy_id_length(fifth_choice),
+                            if (nullList(choice_list)) { False } else { True },
+                            {
+                              let all_have_policy_id_length =
+                                all_have_policy_id_length_template(choice_has_policy_id_length);
+                              all_have_policy_id_length(
+                              all_have_policy_id_length,
+                              choice_list
+                              )
+                            },
+                          }
+                        },
+                        mapData(remove_empty_policy_entries(selected_pool_output_value)) =d= mapData(value_singleton(
+                        own_policy_id, 0x4d534753, 1)),
+                      }
+                    },
+                    #error
+                    ))
+                  },
+                  #error
+                  ))
+                },
+                #error
+                ))
+              }
+            }
+            )
+          }
+          ) {
+            #()
+          } else {
+            #
+            proc {
+              !error;
+              error
+            }
+          }
+          )
+        }
+      } else {
+        #
+        {
+          let script_context_head_data =
+            list_first(constr_fields_of(script_context));
+          fn (branch_context_data) {
+            let assert_authen_choice_bytes_data =
+              assert_choice_bytes_data_template(constr_tag_of, constr_fields_of);
+            let assert_authen_redeemer_shape =
+              assert_redeemer_shape_template(constr_tag_of, constr_fields_of, assert_authen_choice_bytes_data);
+            let authen_redeemer_checked =
+              assert_authen_redeemer_shape(authen_redeemer);
+            !
+            (
+            if (
+            {
+              let branch_context_fields =
+                constr_fields_of(branch_context_data);
+              let tx_info_data =
+                list_first(branch_context_fields);
+              let branch_context_tail =
+                tailList(branch_context_fields);
+              let spending_purpose_data =
+                list_first(branch_context_tail);
+              assert(1 =i= constr_tag_of(spending_purpose_data));
+              let spending_purpose_fields =
+                constr_fields_of(spending_purpose_data);
+              let spending_input_ref =
+                list_first(spending_purpose_fields);
+              let tx_info_fields =
+                constr_fields_of(tx_info_data);
+              let tx_inputs =
+                list_first_list(tx_info_fields);
+              let after_tx_inputs =
+                tailList(tx_info_fields);
+              let after_reference_inputs =
+                tailList(after_tx_inputs);
+              let tx_outputs =
+                list_first_list(after_reference_inputs);
+              let after_tx_outputs =
+                tailList(after_reference_inputs);
+              let after_tx_fee =
+                tailList(after_tx_outputs);
+              let tx_mint_value =
+                list_first_map(after_tx_fee);
+              let after_tx_mint =
+                tailList(after_tx_fee);
+              let after_dcerts =
+                tailList(after_tx_mint);
+              let tx_withdrawals =
+                list_first_map(after_dcerts);
+              let after_withdrawals =
+                tailList(after_dcerts);
+              let after_valid_range =
+                tailList(after_withdrawals);
+              let tx_signatories =
+                list_first_list(after_valid_range);
+              let selected_input_option =
+                {
+                let find_input_by_reference =
+                  find_input_by_ref(spending_input_ref);
+                find_input_by_reference(find_input_by_reference, tx_inputs)
+              };
+              assert(0 =i= constr_tag_of(selected_input_option));
+              let selected_input_option_fields =
+                constr_fields_of(selected_input_option);
+              let selected_input =
+                list_first(selected_input_option_fields);
+              let selected_input_fields =
+                constr_fields_of(selected_input);
+              let selected_input_tail =
+                tailList(selected_input_fields);
+              let selected_input_output =
+                list_first(selected_input_tail);
+              let selected_output_fields =
+                constr_fields_of(selected_input_output);
+              let selected_output_address =
+                list_first(selected_output_fields);
+              let selected_output_tail =
+                tailList(selected_output_fields);
+              let selected_output_value =
+                list_first_map(selected_output_tail);
+              let selected_output_address_fields =
+                constr_fields_of(selected_output_address);
+              let selected_payment_credential =
+                list_first(selected_output_address_fields);
+              assert(1 =i= constr_tag_of(selected_payment_credential));
+              let selected_payment_credential_fields =
+                constr_fields_of(selected_payment_credential);
+              let selected_policy_id =
+                list_first_bytes(selected_payment_credential_fields);
+              let authen_redeemer_fields =
+                constr_fields_of(authen_redeemer);
+              let authen_redeemer_tail =
+                tailList(authen_redeemer_fields);
+              let after_second_redeemer_field =
+                tailList(authen_redeemer_tail);
+              let after_third_redeemer_field =
+                tailList(after_second_redeemer_field);
+              let after_fourth_redeemer_field =
+                tailList(after_third_redeemer_field);
+              let after_fifth_redeemer_field =
+                tailList(after_fourth_redeemer_field);
+              let auth_choice_data =
+                list_first(after_fifth_redeemer_field);
+              let first_tx_output =
+                list_first(tx_outputs);
+              let first_output_fields =
+                constr_fields_of(first_tx_output);
+              let first_output_address =
+                list_first(first_output_fields);
+              let first_output_tail =
+                tailList(first_output_fields);
+              let first_output_value =
+                list_first_map(first_output_tail);
+              let after_first_output_value =
+                tailList(first_output_tail);
+              let first_output_datum =
+                list_first(after_first_output_value);
+              let first_output_address_fields =
+                constr_fields_of(first_output_address);
+              let first_output_payment_credential =
+                list_first(first_output_address_fields);
+              let first_output_datum_data =
+                {
+                let first_output_datum_tag =
+                  constr_tag_of(first_output_datum);
+                assert(2 =i= first_output_datum_tag);
+                list_first(constr_fields_of(first_output_datum))
+              };
+              let first_output_datum_checked =
+                assert_authen_redeemer_shape(first_output_datum_data);
+              and {
+                {
+                  let auth_choice_tag =
+                    constr_tag_of(auth_choice_data);
+                  !
+                  (
+                  if (0 =i= auth_choice_tag) {
+                    #
+                    {
+                      let required_choice_bytes =
+                        list_first_bytes(constr_fields_of(auth_choice_data));
+                      let byte_list_contains =
+                        byte_list_contains_template(required_choice_bytes);
+                      byte_list_contains(byte_list_contains, tx_signatories)
+                    }
+                  } else {
+                    #
+                    !
+                    (
+                    if (1 =i= auth_choice_tag) {
+                      #
+                      {
+                        let choice_fields =
+                          constr_fields_of(auth_choice_data);
+                        let choice_bytes =
+                          list_first_bytes(choice_fields);
+                        let expected_choice_data =
+                          constrData(1, mkCons(bData(choice_bytes), list<data>[]));
+                        let inputs_contain_choice_datum =
+                          inputs_contain_choice_datum_template(constr_fields_of, expected_choice_data);
+                        inputs_contain_choice_datum(inputs_contain_choice_datum, tx_inputs)
+                      }
+                    } else {
+                      #
+                      {
+                        let expected_policy_key =
+                          constrData(
+                        0,
+                        mkCons(constrData(1, mkCons(list_first(constr_fields_of(auth_choice_data)), list<data>[])), list<data>[])
+                        );
+                        let map_contains_policy_key =
+                          map_contains_policy_key_template(expected_policy_key);
+                        map_contains_policy_key(map_contains_policy_key, tx_withdrawals)
+                      }
+                    }
+                    )
+                  }
+                  )
+                },
+                (
+                {
+                  let policy_assets_option =
+                    {
+                    let find_policy_assets =
+                      find_policy_entry_template(selected_policy_id);
+                    find_policy_assets(find_policy_assets, selected_output_value)
+                  };
+                  let msg_token_amount_option =
+                    {
+                    let policy_assets_tag =
+                      constr_tag_of(policy_assets_option);
+                    !
+                    (
+                    if (1 =i= policy_assets_tag) {
+                      #data(constr 1 [])
+                    } else {
+                      #
+                      {
+                        let policy_assets =
+                          list_first_map(constr_fields_of(policy_assets_option));
+                        let find_token_amount =
+                          find_token_amount_template(());
+                        find_token_amount(find_token_amount, policy_assets)
+                      }
+                    }
+                    )
+                  };
+                  let msg_token_amount_tag =
+                    constr_tag_of(msg_token_amount_option);
+                  !
+                  (if (1 =i= msg_token_amount_tag) { #0 } else { #list_first_int(constr_fields_of(msg_token_amount_option)) })
+                }
+                =i=
+                  1
+                ),
+                {
+                  let remove_policy_entries_local =
+                    drop_policy_entries;
+                  and {
+                    (
+                    (mapData(remove_policy_entries_local(first_output_value, 0x)))
+                    =d=
+                      (mapData(
+                    {
+                      let compare_token_names =
+                        compare_bytes_ordering;
+                      !
+                      (
+                      if (1 =i= 0) {
+                        #list<pair<data, data>>[]
+                      } else {
+                        #
+                        {
+                          let msg_asset_map =
+                            {
+                            let insert_token =
+                              insert_token_template(compare_token_names);
+                            insert_token(insert_token, list<pair<data, data>>[])
+                          };
+                          let insert_policy =
+                            insert_policy_template(compare_token_names, selected_policy_id, msg_asset_map);
+                          insert_policy(insert_policy, list<pair<data, data>>[])
+                        }
+                      }
+                      )
+                    }
+                    ))
+                    ),
+                    first_output_payment_credential =d= selected_payment_credential,
+                    mapData(remove_policy_entries_local(tx_mint_value, 0x)) =d= data({}),
+                    {
+                      let choice_has_policy_id_length =
+                        choice_has_policy_id_length_template(constr_tag_of, constr_fields_of);
+                      let redeemer_choice_fields =
+                        constr_fields_of(first_output_datum_data);
+                      let redeemer_choice_list =
+                        list_first_list(redeemer_choice_fields);
+                      let choice_tail =
+                        tailList(redeemer_choice_fields);
+                      let first_choice =
+                        list_first(choice_tail);
+                      let second_tail =
+                        tailList(choice_tail);
+                      let second_choice =
+                        list_first(second_tail);
+                      let third_tail =
+                        tailList(second_tail);
+                      let third_choice =
+                        list_first(third_tail);
+                      let fourth_tail =
+                        tailList(third_tail);
+                      let fourth_choice =
+                        list_first(fourth_tail);
+                      let fifth_tail =
+                        tailList(fourth_tail);
+                      let fifth_choice =
+                        list_first(fifth_tail);
+                      and {
+                        choice_has_policy_id_length(first_choice),
+                        choice_has_policy_id_length(second_choice),
+                        choice_has_policy_id_length(third_choice),
+                        choice_has_policy_id_length(fourth_choice),
+                        choice_has_policy_id_length(fifth_choice),
+                        if (nullList(redeemer_choice_list)) { False } else { True },
+                        {
+                          let all_have_policy_id_length =
+                            all_have_policy_id_length_template(choice_has_policy_id_length);
+                          all_have_policy_id_length(
+                          all_have_policy_id_length,
+                          redeemer_choice_list
+                          )
+                        },
+                      }
+                    },
+                  }
+                },
+              }
+            }
+            ) {
+              #()
+            } else {
+              #
+              proc {
+                !error;
+                error
+              }
+            }
+            )
+          }
+        }
+      }
+    )
+  }
+}

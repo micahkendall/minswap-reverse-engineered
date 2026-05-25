@@ -1,0 +1,588 @@
+program_name "pool_validator_validate_pool_batching";
+language plutus_v2;
+flat_hash "c44cf3f1083ddd91bd892e44a9bd336eb0d740deffd09f12268c53b9bd2ccfe0";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (pool_policy_data) {
+    let pool_policy_id =
+      unBData(pool_policy_data);
+    fn (pool_datum, pool_redeemer, script_context) {
+      let assert_order_step =
+        assert_step_template(constr_tag_of, constr_fields_of);
+      let assert_each_list_item =
+        check_each_list_item;
+      let pool_redeemer_shape_checked =
+        {
+          let pool_redeemer_tag =
+            constr_tag_of(pool_redeemer);
+          assert(0 =i= pool_redeemer_tag);
+          let pool_redeemer_fields =
+            constr_fields_of(pool_redeemer);
+          let [batcher_index << unIData, after_batcher_index] =
+            pool_redeemer_fields;
+          let [order_batcher_fees << unListData, after_order_batcher_fees] =
+            after_batcher_index;
+          let [order_input_indexes << unBData, after_order_input_indexes] =
+            after_order_batcher_fees;
+          let [route_pool_indexes_option, after_route_pool_indexes_option] =
+            after_order_input_indexes;
+          let route_volatility_fees =
+            list_first_list(after_route_pool_indexes_option);
+          !
+            (chooseList(
+              tailList(after_route_pool_indexes_option),
+              # {
+                let order_batcher_fees_checked =
+                  assert_each_list_item(
+                    order_batcher_fees,
+                    assert_fee_data
+                  );
+                let route_pool_indexes_option_checked =
+                  {
+                    let route_pool_indexes_option_tag =
+                      constr_tag_of(route_pool_indexes_option);
+                    !
+                      (
+                        if (0 =i= route_pool_indexes_option_tag) {
+                          # {
+                            let route_pool_indexes_fields =
+                              constr_fields_of(route_pool_indexes_option);
+                            let route_pool_indexes =
+                              list_first_bytes(route_pool_indexes_fields);
+                            !
+                              (chooseList(tailList(route_pool_indexes_fields), #(), #error))
+                          }
+                        } else {
+                          # {
+                            assert(1 =i= route_pool_indexes_option_tag);
+                            !
+                              (chooseList(constr_fields_of(route_pool_indexes_option), #(), #error))
+                          }
+                        }
+                      )
+                  };
+                let route_volatility_fees_checked =
+                  assert_each_list_item(
+                    route_volatility_fees,
+                    assert_step_entry_template(assert_order_step)
+                  );
+                ()
+              },
+              #error
+            ))
+        };
+      !
+      (
+        if (
+        {
+          let script_context_fields =
+            constr_fields_of(script_context);
+          let [batch_tx_info_data, after_batch_tx_info] =
+            script_context_fields;
+          let batching_withdrawal_purpose =
+            list_first(after_batch_tx_info);
+          assert(2 =i= constr_tag_of(batching_withdrawal_purpose));
+          let batching_purpose_fields =
+            constr_fields_of(batching_withdrawal_purpose);
+          let batching_stake_credential_data =
+            list_first(batching_purpose_fields);
+          let tx_info_fields =
+            constr_fields_of(batch_tx_info_data);
+          let [tx_inputs << unListData, after_tx_inputs] =
+            tx_info_fields;
+          let [reference_inputs << unListData, after_reference_inputs] =
+            after_tx_inputs;
+          let [tx_outputs << unListData, after_tx_outputs] =
+            after_reference_inputs;
+          let after_tx_fee =
+            tailList(after_tx_outputs);
+          let [tx_mint << unMapData, after_tx_mint] =
+            after_tx_fee;
+          let after_tx_certificates =
+            tailList(after_tx_mint);
+          let [tx_withdrawals << unMapData, after_tx_withdrawals] =
+            after_tx_certificates;
+          let [tx_validity_range, after_validity_range] =
+            after_tx_withdrawals;
+          let [tx_extra_signatories << unListData, after_extra_signatories] =
+            after_validity_range;
+          let after_redeemers =
+            tailList(after_extra_signatories);
+          let datum_map =
+            list_first_map(after_redeemers);
+          let pool_redeemer_fields =
+            constr_fields_of(pool_redeemer);
+          let [batcher_index << unIData, after_batcher_index] =
+            pool_redeemer_fields;
+          let [order_batcher_fees << unListData, after_order_batcher_fees] =
+            after_batcher_index;
+          let [order_input_indexes << unBData, after_order_input_indexes] =
+            after_order_batcher_fees;
+          let [route_pool_indexes_option, after_route_pool_indexes_option] =
+            after_order_input_indexes;
+          let route_volatility_fees =
+            list_first_list(after_route_pool_indexes_option);
+          let inline_output_datum_data =
+            inline_output_datum_data_template(constr_tag_of, constr_fields_of);
+          let value_token_amount =
+            make_amount(constr_tag_of, constr_fields_of);
+          let global_setting_datum =
+            resolve_global_setting_datum(
+              constr_fields_of,
+              constr_tag_of,
+              assert_each_list_item,
+              reference_inputs,
+              pool_policy_id,
+              inline_output_datum_data,
+              value_token_amount
+            );
+          let global_setting_fields =
+            constr_fields_of(global_setting_datum);
+          let batcher_authorizer_choices =
+            list_first_list(global_setting_fields);
+          let validity_midpoint_time =
+            compute_validity_midpoint_time(constr_fields_of, constr_tag_of, tx_validity_range);
+          let list_at_index_impl =
+            list_at_index_template(());
+          let list_at_index =
+            list_at_index_impl(list_at_index_impl);
+          let list_at_index_by_tens_impl =
+            list_at_index_by_tens_template(list_at_index);
+          let list_at_index_by_tens =
+            list_at_index_by_tens_impl(list_at_index_by_tens_impl);
+          let selected_batcher_authorizer =
+            list_at_index_by_tens(batcher_authorizer_choices, batcher_index);
+          let is_unique_byte_string =
+            is_unique_byte_string_template(());
+          assert(
+            (
+              and {
+                batching_authorizer_is_valid(
+                  constr_tag_of,
+                  constr_fields_of,
+                  selected_batcher_authorizer,
+                  tx_extra_signatories,
+                  tx_inputs,
+                  tx_withdrawals
+                ),
+                is_unique_byte_string(order_input_indexes),
+                value_without_ada_is_empty(tx_mint),
+              }
+            )
+          );
+          let filter_data_list =
+            filter_data_list_worker;
+          let matched_pool_inputs =
+            filter_data_list(
+              tx_inputs,
+              input_matches_datum_template(constr_fields_of, pool_datum)
+            );
+          let matched_pool_outputs =
+            filter_data_list(
+              tx_outputs,
+              output_matches_datum_template(constr_fields_of, pool_datum)
+            );
+          let candidate_order_inputs =
+            filter_data_list(
+              tx_inputs,
+              input_candidate_template(constr_fields_of, constr_tag_of, selected_batcher_authorizer, pool_datum)
+            );
+          let prepend_data_item =
+            prepend_item_template(());
+          let fold_bytes_reverse =
+            fold_bytes_reverse_template(());
+          let indexed_order_inputs =
+            fold_bytes_reverse(
+              order_input_indexes,
+              list<data>[],
+              prepend_indexed_template(prepend_data_item, list_at_index_by_tens, candidate_order_inputs)
+            );
+          let lists_same_length_impl =
+            lists_same_length_template(());
+          let lists_same_length =
+            lists_same_length_impl(lists_same_length_impl);
+          let list_length_impl =
+            list_length_template(());
+          let list_length =
+            list_length_impl(list_length_impl);
+          assert(and { lengthOfByteString(order_input_indexes) =i= list_length(candidate_order_inputs), lists_same_length(matched_pool_inputs,
+            matched_pool_outputs) });
+          !
+          (chooseList(
+          matched_pool_inputs,
+          #False,
+          #
+          {
+            let pool_inputs_tail =
+              tailList(matched_pool_inputs);
+            let assert_tagged_single_byte_data =
+              assert_tagged_single_byte_data_template(constr_tag_of, constr_fields_of);
+            let validate_asset_pair =
+              validate_asset_pair_data(constr_tag_of, constr_fields_of);
+            let assert_step_data =
+              assert_step_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data);
+            let concat_bytes =
+              append_bytes;
+            let hash_bytes =
+              sha3_hash_bytes;
+            let compare_bytes_as_ordering_data =
+              compare_bytes_ordering;
+            let int_between_inclusive =
+              int_between_inclusive_template(());
+            let assert_state_datum_shape =
+              assert_state_datum_shape_template(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_step_data, validate_asset_pair,
+            assert_order_step);
+            let is_ada_asset =
+              is_ada_asset_template(());
+            let value_add =
+              make_add(constr_tag_of, constr_fields_of, compare_bytes_as_ordering_data);
+            let apply_optional_fee_delta =
+              apply_optional_fee_delta_template(constr_tag_of, constr_fields_of, int_between_inclusive);
+            let build_pool_state_datum =
+              build_state_datum_template(constr_fields_of, inline_output_datum_data, assert_state_datum_shape, list_first_constr_tag,
+            hash_bytes, concat_bytes, value_token_amount, is_ada_asset, value_add, apply_optional_fee_delta);
+            let resolve_output_datum_data =
+              resolve_output_datum_data_template(constr_tag_of, constr_fields_of);
+            let assert_tagged_single_int_data =
+              assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+            let assert_tagged_single_int_bound =
+              assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+            let assert_order_asset_data =
+              assert_asset_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, assert_step_data);
+            let assert_order_choice_data =
+              assert_choice_data_template(constr_tag_of, constr_fields_of);
+            let assert_order_datum_shape =
+              assert_datum_shape_template(constr_tag_of, constr_fields_of, list_first_constr_tag, data_pair_from_list,
+            assert_each_list_item, validate_asset_pair, assert_tagged_single_int_bound, assert_tagged_single_int_data,
+            assert_order_asset_data, assert_order_choice_data);
+            let matches_datum_reference =
+              matches_datum_reference_template(constr_tag_of, constr_fields_of);
+            let matches_output_address_datum =
+              matches_output_address_datum_template(constr_fields_of, constr_tag_of, matches_datum_reference);
+            let constant_product_swap_out =
+              constant_product_swap_out_template(());
+            let scaled_amount_from_option =
+              scaled_amount_from_option_template(constr_tag_of, list_first_int, constr_fields_of);
+            !
+            (chooseList(
+            pool_inputs_tail,
+            #
+            {
+              let selected_pool_input_info =
+                list_first(matched_pool_inputs);
+              let selected_pool_output =
+                list_first(matched_pool_outputs);
+              let selected_route_volatility_fee =
+                list_first(route_volatility_fees);
+              !
+              (chooseList(
+              tailList(route_volatility_fees),
+              #
+              {
+                let selected_pool_input_fields =
+                  constr_fields_of(selected_pool_input_info);
+                let after_pool_input_ref =
+                  tailList(selected_pool_input_fields);
+                let selected_pool_input_output =
+                  list_first(after_pool_input_ref);
+                let pool_step_datum_fields =
+                  constr_fields_of(build_pool_state_datum(batching_stake_credential_data, selected_pool_input_output,
+                selected_pool_output, pool_policy_id, False, selected_route_volatility_fee));
+                let [pool_asset_a, after_pool_asset_a] =
+                  pool_step_datum_fields;
+                let [pool_asset_b, after_pool_asset_b] =
+                  after_pool_asset_a;
+                let [pool_lp_asset, after_pool_lp_asset] =
+                  after_pool_asset_b;
+                let [base_fee_a_numerator << unIData, after_base_fee_a] =
+                  after_pool_lp_asset;
+                let [base_fee_b_numerator << unIData, after_base_fee_b] =
+                  after_base_fee_a;
+                let [fee_sharing_option, after_fee_sharing] =
+                  after_base_fee_b;
+                let [input_pool_snapshot << unListData, after_input_pool_snapshot] =
+                  after_fee_sharing;
+                let expected_next_pool_snapshot =
+                  list_first_list(after_input_pool_snapshot);
+                (
+                listData(expected_next_pool_snapshot)
+                =d=
+                  (listData(
+                {
+                  let square_int =
+                    square_int_template(());
+                  let integer_sqrt =
+                    integer_sqrt_template(());
+                  let copy_data_pair_list =
+                    copy_data_pair_list_template(());
+                  let first_field_from_fields =
+                    first_field_from_fields_template(());
+                  let scaled_amount_with_denominator =
+                    scaled_amount_with_denominator_template(constr_tag_of, list_first_int, constr_fields_of);
+                  let compute_quadratic_liquidity_pair =
+                    compute_quadratic_liquidity_pair_template(square_int, integer_sqrt);
+                  let compute_quadratic_swap_delta =
+                    compute_quadratic_swap_delta_template(integer_sqrt);
+                  let proportional_amount_pair =
+                    proportional_amount_pair_template(());
+                  let adjust_value_for_pair_delta =
+                    adjust_value_for_pair_delta_template(is_ada_asset, value_add);
+                  let second_field_from_fields =
+                    second_field_from_fields_template(());
+                  let subtract_ada_amount =
+                    subtract_ada_amount_template(value_add);
+                  let matches_output_address_value_datum =
+                    matches_output_address_value_datum_template(constr_fields_of, constr_tag_of, matches_datum_reference);
+                  let apply_swap_step =
+                    apply_swap_step_template(constr_fields_of, constr_tag_of, value_token_amount, constant_product_swap_out,
+                  scaled_amount_from_option, matches_datum_reference, second_field_from_fields, is_ada_asset, copy_data_pair_list,
+                  first_field_from_fields, adjust_value_for_pair_delta, matches_output_address_value_datum, subtract_ada_amount);
+                  let apply_steps =
+                    apply_steps_template(constr_fields_of, constr_tag_of, list_first_constr_tag, data_pair_from_list,
+                  resolve_output_datum_data, assert_order_datum_shape, matches_output_address_datum,
+                  matches_output_address_value_datum, value_add, value_token_amount, constant_product_swap_out,
+                  scaled_amount_from_option, proportional_amount_pair, adjust_value_for_pair_delta, subtract_ada_amount,
+                  compute_quadratic_swap_delta, compute_quadratic_liquidity_pair, scaled_amount_with_denominator,
+                  apply_swap_step, is_ada_asset, datum_map, validity_midpoint_time, pool_asset_a, pool_asset_b,
+                  pool_lp_asset, base_fee_a_numerator, base_fee_b_numerator, fee_sharing_option);
+                  apply_steps(apply_steps, indexed_order_inputs, tx_outputs, order_batcher_fees, input_pool_snapshot)
+                }
+                ))
+                )
+              },
+              #error
+              ))
+            },
+            #
+            {
+              let route_order_input =
+                list_first(indexed_order_inputs);
+              !
+              (chooseList(
+              tailList(indexed_order_inputs),
+              #
+              {
+                let route_terminal_output =
+                  list_first(tx_outputs);
+                let order_batcher_fee =
+                  list_first_int(order_batcher_fees);
+                !
+                (chooseList(
+                tailList(order_batcher_fees),
+                #
+                {
+                  let order_input_fields =
+                    constr_fields_of(route_order_input);
+                  let after_order_input_ref =
+                    tailList(order_input_fields);
+                  let order_input_resolved_output =
+                    list_first(after_order_input_ref);
+                  let order_input_resolved_output_fields =
+                    constr_fields_of(order_input_resolved_output);
+                  let after_order_input_address =
+                    tailList(order_input_resolved_output_fields);
+                  let [order_input_value << unMapData, after_order_input_value] =
+                    after_order_input_address;
+                  let order_input_datum_reference =
+                    list_first(after_order_input_value);
+                  let route_terminal_output_fields =
+                    constr_fields_of(route_terminal_output);
+                  let after_route_terminal_address =
+                    tailList(route_terminal_output_fields);
+                  let route_terminal_value_map =
+                    list_first_map(after_route_terminal_address);
+                  let order_datum_data =
+                    resolve_output_datum_data(datum_map, order_input_datum_reference);
+                  let order_datum_shape_checked =
+                    assert_order_datum_shape(order_datum_data);
+                  let order_datum_fields =
+                    constr_fields_of(order_datum_data);
+                  let after_order_canceller_data =
+                    tailList(order_datum_fields);
+                  let after_refund_receiver_asset =
+                    tailList(after_order_canceller_data);
+                  let after_refund_receiver_datum_choice =
+                    tailList(after_refund_receiver_asset);
+                  let [success_receiver_asset_data, after_success_receiver_asset] =
+                    after_refund_receiver_datum_choice;
+                  let [success_receiver_datum_choice_data, after_success_receiver_datum_choice] =
+                    after_success_receiver_asset;
+                  let [order_lp_asset_data, after_order_lp_asset] =
+                    after_success_receiver_datum_choice;
+                  let [order_step_data, after_order_step] =
+                    after_order_lp_asset;
+                  let [max_order_batcher_fee << unIData, after_max_order_batcher_fee] =
+                    after_order_step;
+                  let order_expiry_setting_data =
+                    list_first(after_max_order_batcher_fee);
+                  assert(9 =i= constr_tag_of(order_step_data));
+                  let route_step_fields =
+                    constr_fields_of(order_step_data);
+                  let [route_pool_step_list << unListData, after_route_pool_steps] =
+                    route_step_fields;
+                  let [route_input_amount_option, after_route_input_amount_option] =
+                    after_route_pool_steps;
+                  let minimum_route_receive_amount =
+                    list_first_int(after_route_input_amount_option);
+                  let first_route_pool_step_fields =
+                    constr_fields_of(list_first(route_pool_step_list));
+                  let first_route_pool_lp_asset =
+                    list_first(first_route_pool_step_fields);
+                  assert(0 =i= constr_tag_of(route_pool_indexes_option));
+                  let route_pool_indexes_fields =
+                    constr_fields_of(route_pool_indexes_option);
+                  let route_pool_indexes =
+                    list_first_bytes(route_pool_indexes_fields);
+                  assert(
+                  (
+                  and {
+                    0 < max_order_batcher_fee,
+                    0 < order_batcher_fee,
+                    order_batcher_fee <= max_order_batcher_fee,
+                    matches_output_address_datum(success_receiver_asset_data, success_receiver_datum_choice_data,
+                    route_terminal_output),
+                    expiry_allows_batch(
+                      constr_tag_of,
+                      constr_fields_of,
+                      data_pair_from_list,
+                      order_expiry_setting_data,
+                      validity_midpoint_time
+                    ),
+                    order_lp_asset_data =d= first_route_pool_lp_asset,
+                    0 < minimum_route_receive_amount,
+                    lists_same_length(matched_pool_inputs, route_pool_step_list),
+                    is_unique_byte_string(route_pool_indexes),
+                    lengthOfByteString(route_pool_indexes) <= 3,
+                  }
+                  )
+                  );
+                  let indexed_route_pool_inputs =
+                    fold_bytes_reverse(
+                  route_pool_indexes,
+                  list<data>[],
+                  prepend_indexed_template(prepend_data_item, list_at_index_by_tens, matched_pool_inputs)
+                  );
+                  let route_step_datums =
+                    {
+                    let build_step_datum =
+                      build_step_datum_template(build_pool_state_datum, batching_stake_credential_data, constr_fields_of,
+                    pool_policy_id);
+                    let map_step_datums =
+                      map_step_datums_template(build_step_datum);
+                    map_step_datums(map_step_datums, indexed_route_pool_inputs, matched_pool_outputs, route_volatility_fees)
+                  };
+                  let validate_step_outputs =
+                    validate_step_outputs_template(constr_fields_of, list_first_constr_tag, constant_product_swap_out,
+                  scaled_amount_from_option);
+                  let validate_step_outputs_chain =
+                    validate_step_outputs(validate_step_outputs);
+                  let first_route_pool_step =
+                    list_first(route_pool_step_list);
+                  let last_route_pool_step =
+                    list_at_index_by_tens(route_pool_step_list, list_length(route_pool_step_list) - 1);
+                  let first_route_step_datum =
+                    list_first(route_step_datums);
+                  let last_route_step_datum =
+                    list_at_index_by_tens(route_step_datums, list_length(route_step_datums) - 1);
+                  let first_route_step_fields =
+                    constr_fields_of(first_route_pool_step);
+                  let first_route_step_tail =
+                    tailList(first_route_step_fields);
+                  let first_route_step_a_to_b =
+                    1 =i= list_first_constr_tag(first_route_step_tail);
+                  let last_route_step_fields =
+                    constr_fields_of(last_route_pool_step);
+                  let last_route_step_tail =
+                    tailList(last_route_step_fields);
+                  let last_route_step_a_to_b =
+                    1 =i= list_first_constr_tag(last_route_step_tail);
+                  let first_route_step_datum_fields =
+                    constr_fields_of(first_route_step_datum);
+                  let [first_route_asset_a, after_first_route_asset_a] =
+                    first_route_step_datum_fields;
+                  let first_route_asset_b =
+                    list_first(after_first_route_asset_a);
+                  let last_route_step_datum_fields =
+                    constr_fields_of(last_route_step_datum);
+                  let [last_route_asset_a, after_last_route_asset_a] =
+                    last_route_step_datum_fields;
+                  let last_route_asset_b =
+                    list_first(after_last_route_asset_a);
+                  let order_input_asset = !(if (first_route_step_a_to_b) { #first_route_asset_a } else { #first_route_asset_b });
+                  let order_output_asset = !(if (last_route_step_a_to_b) { #last_route_asset_b } else { #last_route_asset_a });
+                  let order_input_asset_fields =
+                    constr_fields_of(order_input_asset);
+                  let [order_input_asset_policy_id << unBData, after_order_input_asset_policy_id] =
+                    order_input_asset_fields;
+                  let order_input_asset_name =
+                    list_first_bytes(after_order_input_asset_policy_id);
+                  let order_output_asset_fields =
+                    constr_fields_of(order_output_asset);
+                  let [order_output_asset_policy_id << unBData, after_order_output_asset_policy_id] =
+                    order_output_asset_fields;
+                  let order_output_asset_name =
+                    list_first_bytes(after_order_output_asset_policy_id);
+                  let route_input_amount =
+                    resolve_route_input_amount(
+                      constr_tag_of,
+                      constr_fields_of,
+                      value_token_amount,
+                      route_input_amount_option,
+                      order_input_value,
+                      order_input_asset_policy_id,
+                      order_input_asset_name
+                    );
+                  assert(0 < route_input_amount);
+                  let computed_route_output_amount =
+                    validate_step_outputs_chain(route_input_amount, route_step_datums, route_pool_step_list);
+                  let expected_terminal_value =
+                    route_terminal_value(
+                      value_add,
+                      order_input_value,
+                      order_batcher_fee,
+                      order_input_asset_policy_id,
+                      order_input_asset_name,
+                      route_input_amount,
+                      order_output_asset_policy_id,
+                      order_output_asset_name,
+                      computed_route_output_amount
+                    );
+                  and {
+                    minimum_route_receive_amount <= computed_route_output_amount,
+                    mapData(expected_terminal_value) =d= mapData(route_terminal_value_map)
+                  }
+                },
+                #error
+                ))
+              },
+              #error
+              ))
+            }
+            ))
+          }
+          ))
+        }
+        ) {
+          #()
+        } else {
+          #
+          proc {
+            !error;
+            error
+          }
+        }
+      )
+    }
+  }
+}

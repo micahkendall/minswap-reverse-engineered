@@ -1,0 +1,596 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/auth_helpers";
+
+@captures 2;
+fn assert_asset_class_template(constr_tag_of, constr_fields_of, asset_class_data) {
+  let asset_class_tag =
+    constr_tag_of(asset_class_data);
+  assert(0 =i= asset_class_tag);
+  let asset_class_fields =
+    constr_fields_of(asset_class_data);
+  let [policy_id << unBData, asset_tail] =
+    asset_class_fields;
+  let token_name =
+    list_first_bytes(asset_tail);
+  !
+    (chooseList(tailList(asset_tail), #(), #error))
+}
+
+@captures 1;
+fn flatten_assets_template(_capture, flatten_assets, remaining_policies) {
+  !
+    (chooseList(
+      remaining_policies,
+      #list<data>[],
+      #
+        {
+          let policy_entry =
+            list_first(remaining_policies);
+          (
+            fn (policy_id, token_entries, tail_assets) {
+              zcom fn (prepend_token_entries, remaining_tokens) {
+                !
+                  (chooseList(
+                    remaining_tokens,
+                    #tail_assets,
+                    #
+                      {
+                        let token_entry =
+                          list_first(remaining_tokens);
+                        mkCons(
+                          listData(mkCons(
+                            bData(policy_id),
+                            mkCons(
+                              bData(unBData(fstPair(token_entry))),
+                              mkCons(
+                                iData(unIData(sndPair(token_entry))),
+                                list<data>[]
+                              )
+                            )
+                          )),
+                          prepend_token_entries(prepend_token_entries, tailList(remaining_tokens))
+                        )
+                      }
+                  ))
+              }(token_entries)
+            }
+            unBData(fstPair(policy_entry))
+            unMapData(sndPair(policy_entry))
+            (flatten_assets(flatten_assets, tailList(remaining_policies)))
+          )
+        }
+    ))
+}
+
+@captures 2;
+fn choice_has_policy_id_length_template(constr_tag_of, constr_fields_of, choice_data) {
+  (
+    (lengthOfByteString(
+      {
+        let choice_tag =
+          constr_tag_of(choice_data);
+        !
+          (
+            if (0 =i= choice_tag) {
+              #
+                list_first_bytes(constr_fields_of(choice_data))
+            } else {
+              #
+                !
+                  (
+                    if (1 =i= choice_tag) {
+                      #
+                        list_first_bytes(constr_fields_of(choice_data))
+                    } else {
+                      #
+                        list_first_bytes(constr_fields_of(choice_data))
+                    }
+                  )
+            }
+          )
+      }
+    ))
+    =i=
+    28
+  )
+}
+
+@captures 1;
+fn all_have_policy_id_length_template(choice_has_policy_id_length, all_have_policy_id_length, remaining_choices) {
+  !
+    (chooseList(
+      remaining_choices,
+      #True,
+      #
+        {
+          let [current_choice, remaining_choices_tail] =
+            remaining_choices;
+          and {
+            choice_has_policy_id_length(current_choice),
+            all_have_policy_id_length(
+              all_have_policy_id_length,
+              remaining_choices_tail
+            ),
+          }
+        }
+    ))
+}
+
+@captures 1;
+fn assert_choice_list_template(assert_choice_bytes, assert_choice_list, remaining_choices) {
+  !
+    (chooseList(
+      remaining_choices,
+      #(),
+      #
+        {
+          let choice_checked =
+            assert_choice_bytes(list_first(remaining_choices));
+          assert_choice_list(
+            assert_choice_list,
+            tailList(remaining_choices)
+          )
+        }
+    ))
+}
+
+@captures 2;
+fn assert_choice_bytes_template(constr_tag_of, constr_fields_of, choice_data) {
+  let choice_tag =
+    constr_tag_of(choice_data);
+  !
+    (
+      if (0 =i= choice_tag) {
+        #
+          {
+            let choice_fields =
+              constr_fields_of(choice_data);
+            let choice_bytes =
+              list_first_bytes(choice_fields);
+            !
+              (chooseList(tailList(choice_fields), #(), #error))
+          }
+      } else {
+        #
+          !
+            (
+              if (1 =i= choice_tag) {
+                #
+                  {
+                    let choice_fields =
+                      constr_fields_of(choice_data);
+                    let choice_bytes =
+                      list_first_bytes(choice_fields);
+                    !
+                      (chooseList(
+                        tailList(choice_fields),
+                        #(),
+                        #error
+                      ))
+                  }
+              } else {
+                #
+                  {
+                    assert(2 =i= choice_tag);
+                    let choice_fields =
+                      constr_fields_of(choice_data);
+                    let choice_bytes =
+                      list_first_bytes(choice_fields);
+                    !
+                      (chooseList(
+                        tailList(choice_fields),
+                        #(),
+                        #error
+                      ))
+                  }
+              }
+            )
+      }
+    )
+}
+
+@captures 3;
+fn assert_redeemer_shape_template(constr_tag_of, constr_fields_of, assert_authen_choice_bytes_data, redeemer_data) {
+  let redeemer_tag =
+    constr_tag_of(redeemer_data);
+  assert(0 =i= redeemer_tag);
+  let redeemer_fields =
+    constr_fields_of(redeemer_data);
+  let [choice_list << unListData, choice_tail] =
+    redeemer_fields;
+  let [first_choice, second_tail] =
+    choice_tail;
+  let [second_choice, third_tail] =
+    second_tail;
+  let [third_choice, fourth_tail] =
+    third_tail;
+  let [fourth_choice, fifth_tail] =
+    fourth_tail;
+  let fifth_choice =
+    list_first(fifth_tail);
+  !
+    (chooseList(
+      tailList(fifth_tail),
+      #
+        {
+          let list_choices_checked =
+            {
+              fn assert_choice_list(assert_choice_list, remaining_choices) {
+                !
+                  (chooseList(
+                    remaining_choices,
+                    #(),
+                    #
+                      {
+                        let choice_checked =
+                          assert_authen_choice_bytes_data(list_first(remaining_choices));
+                        assert_choice_list(assert_choice_list, tailList(remaining_choices))
+                      }
+                  ))
+              }
+              assert_choice_list(assert_choice_list, choice_list)
+            };
+          let first_choice_checked =
+            assert_authen_choice_bytes_data(first_choice);
+          let second_choice_checked =
+            assert_authen_choice_bytes_data(second_choice);
+          let third_choice_checked =
+            assert_authen_choice_bytes_data(third_choice);
+          let fourth_choice_checked =
+            assert_authen_choice_bytes_data(fourth_choice);
+          let fifth_choice_checked =
+            assert_authen_choice_bytes_data(fifth_choice);
+          ()
+        },
+      #error
+    ))
+}
+
+@captures 3;
+fn filter_tagged_key_entries_template(constr_tag_of, constr_fields_of, selected_input_ref, filter_tagged_key_entries, remaining_entries) {
+  !
+    (chooseList(
+      remaining_entries,
+      #list<pair<data, data>>[],
+      #
+        {
+          let [candidate_entry, remaining_entries_tail] =
+            remaining_entries;
+          !
+            (
+              if (
+                {
+                  let candidate_key =
+                    fstPair(candidate_entry);
+                  let candidate_key_tag =
+                    constr_tag_of(candidate_key);
+                  and {
+                    1 =i= candidate_key_tag,
+                    selected_input_ref =d= list_first(constr_fields_of(candidate_key)),
+                  }
+                }
+              ) {
+                #
+                  (mkCons(
+                    candidate_entry,
+                    filter_tagged_key_entries(filter_tagged_key_entries, remaining_entries_tail)
+                  ))
+              } else {
+                #
+                  (filter_tagged_key_entries(filter_tagged_key_entries, remaining_entries_tail))
+              }
+            )
+        }
+    ))
+}
+
+@captures 3;
+fn insert_policy_template(compare_token_names, selected_policy_id, msg_asset_map, insert_policy, remaining_policies) {
+  !
+    (chooseList(
+      remaining_policies,
+      #mkCons(mkPairData(bData(selected_policy_id), mapData(msg_asset_map)), list<pair<data, data>>[]),
+      #
+        {
+          let [policy_entry, remaining_policies_tail] =
+            remaining_policies;
+          let policy_id =
+            unBData(fstPair(policy_entry));
+          let policy_assets =
+            unMapData(sndPair(policy_entry));
+          !
+            (
+              if (compare_token_names(selected_policy_id, policy_id) =d= data(constr 0 [])) {
+                #
+                  (mkCons(mkPairData(bData(selected_policy_id), mapData(msg_asset_map)), remaining_policies))
+              } else {
+                #
+                  !
+                    (
+                      if (selected_policy_id =b= policy_id) {
+                        #
+                          (mkCons(
+                            mkPairData(bData(selected_policy_id), mapData(msg_asset_map)),
+                            remaining_policies_tail
+                          ))
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(policy_id), mapData(policy_assets)),
+                            insert_policy(insert_policy, remaining_policies_tail)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn insert_token_template(compare_token_names, insert_token, remaining_assets) {
+  !
+    (chooseList(
+      remaining_assets,
+      #mkCons(mkPairData(data(bytes 0x4d534753), data(1)), list<pair<data, data>>[]),
+      #
+        {
+          let [asset_entry, remaining_assets_tail] =
+            remaining_assets;
+          let token_name =
+            unBData(fstPair(asset_entry));
+          let token_amount =
+            unIData(sndPair(asset_entry));
+          !
+            (
+              if (compare_token_names(0x4d534753, token_name) =d= data(constr 0 [])) {
+                #
+                  (mkCons(
+                    mkPairData(data(bytes 0x4d534753), data(1)),
+                    remaining_assets
+                  ))
+              } else {
+                #
+                  !
+                    (
+                      if (0x4d534753 =b= token_name) {
+                        #
+                          (mkCons(
+                            mkPairData(data(bytes 0x4d534753), data(1)),
+                            remaining_assets_tail
+                          ))
+                      } else {
+                        #
+                          (mkCons(
+                            mkPairData(bData(token_name), iData(token_amount)),
+                            insert_token(insert_token, remaining_assets_tail)
+                          ))
+                      }
+                    )
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn find_token_amount_template(_capture, find_token_amount, remaining_assets) {
+  !
+    (chooseList(
+      remaining_assets,
+      #data(constr 1 []),
+      #
+        {
+          let [asset_entry, remaining_assets_tail] =
+            remaining_assets;
+          let token_name =
+            unBData(fstPair(asset_entry));
+          let token_amount =
+            unIData(sndPair(asset_entry));
+          !
+            (
+              if (0x4d534753 =b= token_name) {
+                #
+                  (constrData(0, mkCons(iData(token_amount), list<data>[])))
+              } else {
+                #
+                  (find_token_amount(find_token_amount, remaining_assets_tail))
+              }
+            )
+        }
+    ))
+}
+
+@captures 1;
+fn byte_list_contains_template(required_choice_bytes, byte_list_contains, remaining_byte_data) {
+  !
+    (chooseList(
+      remaining_byte_data,
+      #False,
+      #
+        {
+          let [candidate_bytes << unBData, remaining_byte_data_tail] =
+            remaining_byte_data;
+          or {
+            candidate_bytes =b= required_choice_bytes,
+            byte_list_contains(byte_list_contains, remaining_byte_data_tail),
+          }
+        }
+    ))
+}
+
+@captures 2;
+fn inputs_contain_choice_datum_template(constr_fields_of, expected_choice_data, inputs_contain_choice_datum, remaining_inputs) {
+  !
+    (chooseList(
+      remaining_inputs,
+      #False,
+      #
+        {
+          let [candidate_input, remaining_inputs_tail] =
+            remaining_inputs;
+          or {
+            (
+     constr_first_field(constr_first_field(constr_second_field(candidate_input)))
+              =d=
+              expected_choice_data
+            ),
+            inputs_contain_choice_datum(inputs_contain_choice_datum, remaining_inputs_tail),
+          }
+        }
+    ))
+}
+
+@captures 1;
+fn map_contains_policy_key_template(expected_policy_key, map_contains_policy_key, remaining_entries) {
+  !
+    (chooseList(
+      remaining_entries,
+      #False,
+      #
+        {
+          let [candidate_entry, remaining_entries_tail] =
+            remaining_entries;
+          let candidate_key =
+            fstPair(candidate_entry);
+          or {
+            expected_policy_key =d= candidate_key,
+            map_contains_policy_key(map_contains_policy_key, remaining_entries_tail),
+          }
+        }
+    ))
+}
+
+
+@captures 3;
+fn find_reference_input_template(constr_fields_of, constr_tag_of, staking_credential_hash, find_reference_input, remaining_inputs) {
+  !
+    (chooseList(
+      remaining_inputs,
+      #data(constr 1 []),
+      #
+        {
+          let [candidate_input, remaining_after_candidate] =
+            remaining_inputs;
+          !
+            (
+              if (
+                {
+                  let candidate_input_fields =
+                    constr_fields_of(candidate_input);
+                  let candidate_input_after_ref =
+                    tailList(candidate_input_fields);
+                  let candidate_resolved_output =
+                    list_first(candidate_input_after_ref);
+                  let candidate_output_fields =
+                    constr_fields_of(candidate_resolved_output);
+                  let candidate_address =
+                    list_first(candidate_output_fields);
+                  let candidate_address_fields =
+                    constr_fields_of(candidate_address);
+                  let candidate_spending_credential =
+                    list_first(candidate_address_fields);
+                  let candidate_credential_tag =
+                    constr_tag_of(candidate_spending_credential);
+                  and { 1 =i= candidate_credential_tag, list_first_bytes(constr_fields_of(candidate_spending_credential)) =b=
+                    staking_credential_hash }
+                }
+              ) {
+                #
+                  (constrData(0, mkCons(candidate_input, list<data>[])))
+              } else {
+                #
+                  (find_reference_input(find_reference_input, remaining_after_candidate))
+              }
+            )
+        }
+    ))
+}
+
+@captures 3;
+fn validate_required_signer_list(tx_signatories, constr_fields_of, required_signer_datum, ignored_continuation) {
+  let required_signers =
+    list_first_list(constr_fields_of(required_signer_datum));
+  fn all_required_signers_present(all_required_signers_present, remaining_required_signers) {
+    !
+      (chooseList(
+        remaining_required_signers,
+        #True,
+        #
+          {
+            let [required_signer << unBData, remaining_required_signers_tail] =
+              remaining_required_signers;
+            and {
+              {
+                fn contains_signer(contains_signer, remaining_signers) {
+                  !
+                    (chooseList(
+                      remaining_signers,
+                      #False,
+                      #
+                        {
+                          let [candidate_signer << unBData, remaining_signers_tail] =
+                            remaining_signers;
+                          or { candidate_signer =b= required_signer, contains_signer(contains_signer, remaining_signers_tail) }
+                        }
+                    ))
+                }
+                contains_signer(contains_signer, tx_signatories)
+              },
+              all_required_signers_present(all_required_signers_present, remaining_required_signers_tail),
+            }
+          }
+      ))
+  }
+  all_required_signers_present(all_required_signers_present, required_signers)
+}
+
+@captures 1;
+fn assert_all_bytes_template(_capture, assert_all_bytes, remaining_signers) {
+  !
+    (chooseList(
+      remaining_signers,
+      #(),
+      #
+        {
+          let signer_hash =
+            list_first_bytes(remaining_signers);
+          assert_all_bytes(assert_all_bytes, tailList(remaining_signers))
+        }
+    ))
+}
+
+@captures 1;
+fn all_required_signers_present_template(tx_signatories, all_required_signers_present, remaining_required_signers) {
+  !
+    (chooseList(
+      remaining_required_signers,
+      #True,
+      #
+        {
+          let [required_signer << unBData, remaining_after_required_signer] =
+            remaining_required_signers;
+          and {
+            {
+              fn contains_required_signer(contains_required_signer, remaining_signers) {
+                !
+                  (chooseList(
+                    remaining_signers,
+                    #False,
+                    #
+                      {
+                        let [signer_hash << unBData, remaining_after_signer] =
+                          remaining_signers;
+                        or { signer_hash =b= required_signer, contains_required_signer(contains_required_signer, remaining_after_signer)
+                          }
+                      }
+                  ))
+              }
+              contains_required_signer(contains_required_signer, tx_signatories)
+            },
+            all_required_signers_present(all_required_signers_present, remaining_after_required_signer),
+          }
+        }
+    ))
+}
+

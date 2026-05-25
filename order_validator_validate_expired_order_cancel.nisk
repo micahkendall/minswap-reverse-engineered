@@ -1,0 +1,113 @@
+program_name "order_validator_validate_expired_order_cancel";
+language plutus_v2;
+flat_hash "89cb0ffc2d0d8f9f41d66358e6d568f38864c577a1dceeca039ab1badf36c412";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (redeemer_data, script_context) {
+    !
+      (
+        if (
+          {
+            let script_context_fields =
+              constr_fields_of(script_context);
+            let tx_info_data =
+              list_first(script_context_fields);
+            let script_context_tail =
+              tailList(script_context_fields);
+            let script_purpose_data =
+              list_first(script_context_tail);
+            assert(2 =i= constr_tag_of(script_purpose_data));
+            let tx_info_fields =
+              constr_fields_of(tx_info_data);
+            let tx_inputs =
+              list_first_list(tx_info_fields);
+            let after_tx_inputs =
+              tailList(tx_info_fields);
+            let after_reference_inputs =
+              tailList(after_tx_inputs);
+            let tx_outputs =
+              list_first_list(after_reference_inputs);
+            let after_tx_outputs =
+              tailList(after_reference_inputs);
+            let after_tx_fee =
+              tailList(after_tx_outputs);
+            let after_tx_mint =
+              tailList(after_tx_fee);
+            let after_dcerts =
+              tailList(after_tx_mint);
+            let after_withdrawals =
+              tailList(after_dcerts);
+            let validity_range_data =
+              list_first(after_withdrawals);
+            let after_valid_range =
+              tailList(after_withdrawals);
+            let after_signatories =
+              tailList(after_valid_range);
+            let after_redeemers =
+              tailList(after_signatories);
+            let tx_datums =
+              list_first_map(after_redeemers);
+            let order_inputs =
+              {
+                let filter_script_credential_inputs =
+                  filter_credential_inputs_template(constr_fields_of, constr_tag_of);
+                filter_script_credential_inputs(filter_script_credential_inputs, tx_inputs)
+              };
+            let start_valid_time_range =
+              {
+                let validity_range_fields =
+                  constr_fields_of(validity_range_data);
+                let lower_bound_data =
+                  list_first(validity_range_fields);
+                let lower_bound_fields =
+                  constr_fields_of(lower_bound_data);
+                let finite_start_bound_data =
+                  list_first(lower_bound_fields);
+                assert(1 =i= constr_tag_of(finite_start_bound_data));
+                list_first_int(constr_fields_of(finite_start_bound_data))
+              };
+            let assert_credential_data =
+              assert_tagged_single_byte_data_template(constr_tag_of, constr_fields_of);
+            let assert_asset_pair_data =
+              validate_asset_pair_data(constr_tag_of, constr_fields_of);
+            let assert_tagged_single_int_data =
+              assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+            let assert_tagged_single_int_bound =
+              assert_tagged_single_int_template(constr_tag_of, constr_fields_of);
+            let assert_output_datum_choice_data =
+              assert_empty_or_hashed_datum_choice_template(constr_tag_of, constr_fields_of);
+            let assert_address_data =
+              assert_address_data_template(constr_tag_of, constr_fields_of, assert_credential_data);
+            let value_ada_amount =
+              cancel_value_ada_amount_template(constr_tag_of, constr_fields_of);
+            let remove_ada_policy =
+              cancel_remove_ada_policy_template(());
+            let validate_cancel_output_pairs =
+              validate_cancel_output_pairs_template(constr_fields_of, constr_tag_of, tx_datums, assert_address_data,
+                assert_output_datum_choice_data, assert_asset_pair_data, list_first_constr_tag, assert_tagged_single_int_bound, assert_tagged_single_int_data,
+                data_pair_from_list, start_valid_time_range, value_ada_amount, remove_ada_policy, validate_cancel_output_value);
+            validate_cancel_output_pairs(validate_cancel_output_pairs, order_inputs, tx_outputs)
+          }
+        ) {
+          #()
+        } else {
+          #
+            proc {
+              !error;
+              error
+            }
+        }
+      )
+  }
+}

@@ -1,0 +1,170 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/batch_index_helpers";
+
+@captures 3;
+fn prepend_indexed_template(prepend_data_item, list_at_index_by_tens, indexed_items, item_index, accumulator) {
+  prepend_data_item(accumulator, list_at_index_by_tens(indexed_items, item_index))
+}
+
+
+@captures 4;
+fn input_candidate_template(constr_fields_of, constr_tag_of, selected_batcher_authorizer, pool_datum, candidate_input) {
+  let candidate_input_fields =
+    constr_fields_of(candidate_input);
+  let after_candidate_input_ref =
+    tailList(candidate_input_fields);
+  let candidate_resolved_output =
+    list_first(after_candidate_input_ref);
+  let candidate_output_fields =
+    constr_fields_of(candidate_resolved_output);
+  let candidate_output_address =
+    list_first(candidate_output_fields);
+  let candidate_address_fields =
+    constr_fields_of(candidate_output_address);
+  let candidate_payment_credential =
+    list_first(candidate_address_fields);
+  and {
+    if (candidate_payment_credential =d= pool_datum) { False } else { True },
+    {
+      let batcher_authorizer_tag =
+        constr_tag_of(selected_batcher_authorizer);
+      !
+        (
+          if (0 =i= batcher_authorizer_tag) {
+            #
+              (
+                if (candidate_payment_credential =d= constrData(0, mkCons(list_first(constr_fields_of(selected_batcher_authorizer)), list<data>[]))) {
+                  False
+                } else {
+                  True
+                }
+              )
+          } else {
+            #
+              !
+                (
+                  if (1 =i= batcher_authorizer_tag) {
+                    #
+                      (
+                        if (candidate_payment_credential =d= constrData(1, mkCons(list_first(constr_fields_of(selected_batcher_authorizer)), list<data>[]))) {
+                          False
+                        } else {
+                          True
+                        }
+                      )
+                  } else {
+                    #
+                      (
+                        if (candidate_payment_credential =d= constrData(1, mkCons(list_first(constr_fields_of(selected_batcher_authorizer)), list<data>[]))) {
+                          False
+                        } else {
+                          True
+                        }
+                      )
+                  }
+                )
+          }
+        )
+    },
+  }
+}
+
+@captures 2;
+fn input_matches_datum_template(constr_fields_of, pool_datum, candidate_input) {
+  constr_first_field(constr_first_field(constr_second_field(candidate_input))) =d= pool_datum
+}
+
+@captures 2;
+fn output_matches_datum_template(constr_fields_of, pool_datum, candidate_output) {
+  constr_first_field(constr_first_field(candidate_output)) =d= pool_datum
+}
+
+
+@captures 1;
+fn prepend_item_template(_capture, accumulator, data_item) {
+  mkCons(data_item, accumulator)
+}
+
+@captures 1;
+fn fold_bytes_reverse_template(_capture, byte_string, initial_state, step_fn) {
+  let last_index =
+    lengthOfByteString(byte_string) - 1;
+  fn fold_from_index(fold_from_index, state, byte_index) {
+    !
+      (if (byte_index < 0) { #state } else { #fold_from_index(fold_from_index, step_fn(byte_string[byte_index], state), byte_index - 1) })
+  }
+  fold_from_index(fold_from_index, initial_state, last_index)
+}
+
+@captures 1;
+fn list_at_index_template(_capture, list_at_index_impl, list_items, remaining_index) {
+  !
+    (if (remaining_index <= 0) { #list_first(list_items) } else { #list_at_index_impl(list_at_index_impl, tailList(list_items), remaining_index - 1) })
+}
+
+@captures 1;
+fn list_at_index_by_tens_template(list_at_index, list_at_index_by_tens_impl, list_items, remaining_index) {
+  !
+    (
+      if (10 <= remaining_index) {
+        #
+          (list_at_index_by_tens_impl(
+            list_at_index_by_tens_impl,
+            tailList(tailList(tailList(tailList(tailList(tailList(tailList(tailList(tailList(tailList(list_items)))))))))),
+            remaining_index - 10
+          ))
+      } else {
+        #
+          (list_at_index(list_items, remaining_index))
+      }
+    )
+}
+
+@captures 1;
+fn lists_same_length_template(_capture, lists_same_length_impl, left_items, right_items) {
+  !
+    (chooseList(
+      left_items,
+      #(listData(right_items) =d= data([])),
+      #!chooseList(right_items, #False, #lists_same_length_impl(lists_same_length_impl, tailList(left_items), tailList(right_items)))
+    ))
+}
+
+@captures 1;
+fn list_length_template(_capture, list_length_impl, list_items) {
+  !
+    (chooseList(list_items, #0, #(1 + list_length_impl(list_length_impl, tailList(list_items)))))
+}
+
+@captures 1;
+fn is_unique_byte_string_template(_capture, candidate_byte_string) {
+  let candidate_length =
+    lengthOfByteString(candidate_byte_string);
+  and {
+    0 < candidate_length,
+    {
+      fn scan_unique_bytes(scan_unique_bytes, seen_flags, byte_index) {
+        or {
+          candidate_length <= byte_index,
+          {
+            let current_byte = candidate_byte_string[byte_index];
+            let seen_flag = seen_flags[current_byte];
+            !
+              (if (seen_flag =i= 1) { #False } else { #scan_unique_bytes(scan_unique_bytes, seen_flags[0:current_byte] ++ 1 :: seen_flags[current_byte + 1:64],
+                byte_index + 1) })
+          },
+        }
+      }
+      scan_unique_bytes(
+        scan_unique_bytes,
+        0x{
+          0000000000000000000000000000000000000000000000000000000000000000
+          0000000000000000000000000000000000000000000000000000000000000000
+        },
+        0
+      )
+    },
+  }
+}
+
+

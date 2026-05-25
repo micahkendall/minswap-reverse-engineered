@@ -1,0 +1,12 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/common_helpers";
+
+import "./core_helpers.nisk";
+import "./value_helpers.nisk";
+import "./auth_helpers.nisk";
+import "./order_helpers.nisk";
+import "./pool_state_helpers.nisk";
+import "./pool_math_helpers.nisk";
+import "./batch_index_helpers.nisk";
+import "./batch_swap_helpers.nisk";
+import "./batch_order_helpers.nisk";

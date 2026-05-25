@@ -1,0 +1,36 @@
+program_name "always_success_spend";
+language plutus_v2;
+flat_hash "555d4359c04096921ecb0e499e9636b5b1c148b002ae27b3d80b492878705572";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+fn validate_spending_purpose(script_purpose_fields) {
+  let script_purpose =
+    list_first(script_purpose_fields);
+  assert(1 =i= constr_tag(script_purpose));
+  True
+}
+
+program 1.0.0
+@root tailList, headList, sndPair, fstPair, ifThenElse;
+
+fn (datum, redeemer, script_context) {
+  !
+    (
+      if (
+        {
+          let context_fields =
+            constr_fields(script_context);
+          validate_spending_purpose(tailList(context_fields))
+        }
+      ) {
+        #()
+      } else {
+        #
+          proc {
+            !error;
+            error
+          }
+      }
+    )
+}

@@ -1,0 +1,459 @@
+program_name "pool_validator_validate_pool";
+language plutus_v2;
+flat_hash "0e2a02193b3e2e83cca69c7a8dfc9ff16e958736448d6b7273ec8eb785a35518";
+branch "agent/minswap-reverse-engineer";
+import "./utils/common_helpers.nisk";
+
+program 1.0.0
+@root tailList, headList, mkCons, chooseList, sndPair, fstPair, ifThenElse;
+
+{
+  fn constr_tag_of(constructor_data) {
+    fstPair(unConstrData(constructor_data))
+  }
+  fn constr_fields_of(constructor_data) {
+    sndPair(unConstrData(constructor_data))
+  }
+  fn (pool_policy_data) {
+    let pool_policy_id =
+      unBData(pool_policy_data);
+    fn (pool_datum, pool_redeemer, script_context) {
+      let assert_asset_pair_data =
+        validate_asset_pair_data(constr_tag_of, constr_fields_of);
+      let assert_datum_data =
+        assert_datum_data_template(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_asset_pair_data);
+      let pool_datum_checked =
+        assert_datum_data(pool_datum);
+      let pool_redeemer_checked =
+        {
+          let pool_redeemer_tag =
+            constr_tag_of(pool_redeemer);
+          !
+            (
+              if (0 =i= pool_redeemer_tag) {
+                #
+                  !
+                    (chooseList(constr_fields_of(pool_redeemer), #(), #error))
+              } else {
+                #
+                  !
+                    (
+                      if (1 =i= pool_redeemer_tag) {
+                        #
+                          {
+                            let pool_redeemer_fields =
+                              constr_fields_of(pool_redeemer);
+                            let update_action_data =
+                              list_first(pool_redeemer_fields);
+                            !
+                              (chooseList(
+                                tailList(pool_redeemer_fields),
+                                #
+                                  {
+                                    let update_action_checked =
+                                      {
+                                        let update_action_tag =
+                                          constr_tag_of(update_action_data);
+                                        !
+                                          (
+                                            if (0 =i= update_action_tag) {
+                                              #
+                                                !
+                                                  (chooseList(constr_fields_of(update_action_data), #(), #error))
+                                            } else {
+                                              #
+                                                !
+                                                  (
+                                                    if (1 =i= update_action_tag) {
+                                                      #
+                                                        !
+                                                          (chooseList(constr_fields_of(update_action_data), #(), #error))
+                                                    } else {
+                                                      #
+                                                        {
+                                                          assert(2 =i= update_action_tag);
+                                                          !
+                                                            (chooseList(constr_fields_of(update_action_data), #(), #error))
+                                                        }
+                                                    }
+                                                  )
+                                            }
+                                          )
+                                      };
+                                    ()
+                                  },
+                                #error
+                              ))
+                          }
+                      } else {
+                        #
+                          {
+                            assert(2 =i= pool_redeemer_tag);
+                            !
+                              (chooseList(constr_fields_of(pool_redeemer), #(), #error))
+                          }
+                      }
+                    )
+              }
+            )
+        };
+      !
+        (
+          if (
+            {
+              let script_context_fields =
+                constr_fields_of(script_context);
+              let [tx_info_data, script_context_after_tx_info] =
+                script_context_fields;
+              let spend_purpose_data =
+                list_first(script_context_after_tx_info);
+              assert(1 =i= constr_tag_of(spend_purpose_data));
+              let spend_purpose_fields =
+                constr_fields_of(spend_purpose_data);
+              let pool_input_ref_data =
+                list_first(spend_purpose_fields);
+              let pool_redeemer_tag =
+                constr_tag_of(pool_redeemer);
+              let map_contains_data_key =
+                map_contains_data_key_template(());
+              !
+                (
+                  if (0 =i= pool_redeemer_tag) {
+                    #
+                      (map_contains_data_key(
+                        tx_info_withdrawals_map(constr_fields_of, tx_info_data),
+                        list_first(constr_fields_of(pool_datum))
+                      ))
+                  } else {
+                    #
+                      {
+                        let remove_ada_policy =
+                          remove_ada_policy_template(());
+                        let value_map_is_empty =
+                          value_map_is_empty_template(());
+                        let filter_data_list =
+                          filter_data_list_worker;
+                        let validate_unique_input_candidate =
+                          validate_unique_input_candidate_template(constr_fields_of, constr_tag_of, filter_data_list);
+                        let pool_credential_authorized =
+                          credential_authorized_template(constr_tag_of, constr_fields_of, map_contains_data_key);
+                        let assert_output_datum_choice_data =
+                          assert_hashed_output_datum_choice_template(constr_tag_of, constr_fields_of);
+                        let find_first_matching_data =
+                          find_first_matching_data_template(());
+                        let value_token_amount =
+                          make_amount(constr_tag_of, constr_fields_of);
+                        let inline_output_datum_data =
+                          inline_output_datum_data_template(constr_tag_of, constr_fields_of);
+                        let find_global_setting_datum =
+                          find_global_setting_datum_template(find_first_matching_data, constr_fields_of, constr_tag_of, value_token_amount,
+                            inline_output_datum_data, assert_output_datum_choice_data);
+                        let find_by_first_field =
+                          find_by_first_field_template(find_first_matching_data, constr_fields_of);
+                        let single_output_at_address =
+                          single_output_at_address_template(filter_data_list, constr_fields_of);
+                        !
+                          (
+                            if (1 =i= pool_redeemer_tag) {
+                              #
+                                {
+                                  let pool_redeemer_fields =
+                                    constr_fields_of(pool_redeemer);
+                                  let update_action_data =
+                                    list_first(pool_redeemer_fields);
+                                  let tx_info_fields =
+                                    constr_fields_of(tx_info_data);
+                                  let [tx_inputs << unListData, after_tx_inputs] =
+                                    tx_info_fields;
+                                  let [reference_inputs << unListData, after_reference_inputs] =
+                                    after_tx_inputs;
+                                  let [tx_outputs << unListData, after_tx_outputs] =
+                                    after_reference_inputs;
+                                  let after_tx_fee =
+                                    tailList(after_tx_outputs);
+                                  let [tx_mint << unMapData, after_tx_mint] =
+                                    after_tx_fee;
+                                  let after_tx_certificates =
+                                    tailList(after_tx_mint);
+                                  let [tx_withdrawals << unMapData, after_tx_withdrawals] =
+                                    after_tx_certificates;
+                                  let after_validity_range =
+                                    tailList(after_tx_withdrawals);
+                                  let tx_extra_signatories =
+                                    list_first_list(after_validity_range);
+                                  let pool_input_option =
+                                    find_by_first_field(tx_inputs, pool_input_ref_data);
+                                  assert(0 =i= constr_tag_of(pool_input_option));
+                                  let pool_input_option_fields =
+                                    constr_fields_of(pool_input_option);
+                                  let pool_input_data =
+                                    list_first(pool_input_option_fields);
+                                  let pool_input_fields =
+                                    constr_fields_of(pool_input_data);
+                                  let after_pool_input_ref =
+                                    tailList(pool_input_fields);
+                                  let pool_input_output_data =
+                                    list_first(after_pool_input_ref);
+                                  let pool_input_output_fields =
+                                    constr_fields_of(pool_input_output_data);
+                                  let pool_input_address_data =
+                                    list_first(pool_input_output_fields);
+                                  let global_setting_datum =
+                                    find_global_setting_datum(reference_inputs, pool_policy_id);
+                                  let global_setting_fields =
+                                    constr_fields_of(global_setting_datum);
+                                  let after_batcher_authorizers =
+                                    tailList(global_setting_fields);
+                                  let [pool_fee_updater, after_pool_fee_updater] =
+                                    after_batcher_authorizers;
+                                  let after_fee_sharing_taker =
+                                    tailList(after_pool_fee_updater);
+                                  let [pool_stake_key_updater, after_pool_stake_key_updater] =
+                                    after_fee_sharing_taker;
+                                  let pool_dynamic_fee_updater =
+                                    list_first(after_pool_stake_key_updater);
+                                  let selected_authorizer =
+                                    {
+                                      let update_action_tag =
+                                        constr_tag_of(update_action_data);
+                                      !if (0 =i= update_action_tag) { #pool_fee_updater } else { #!(if (1 =i= update_action_tag) { #pool_dynamic_fee_updater }
+                                        else { #pool_stake_key_updater }) }
+                                    };
+                                  and {
+                                    pool_credential_authorized(selected_authorizer, tx_inputs, tx_withdrawals, tx_extra_signatories),
+                                    validate_unique_input_candidate(tx_inputs, pool_input_address_data, selected_authorizer),
+                                    value_map_is_empty(remove_ada_policy(tx_mint)),
+                                    {
+                                      let int_between_inclusive =
+                                        int_between_inclusive_template(());
+                                      let pool_input_fields_for_update =
+                                        constr_fields_of(pool_input_data);
+                                      let after_pool_input_ref_for_update =
+                                        tailList(pool_input_fields_for_update);
+                                      let input_pool_output_data =
+                                        list_first(after_pool_input_ref_for_update);
+                                      let input_pool_output_fields =
+                                        constr_fields_of(input_pool_output_data);
+                                      let [input_pool_address_data, after_input_pool_address] =
+                                        input_pool_output_fields;
+                                      let input_pool_value_map =
+                                        list_first_map(after_input_pool_address);
+                                      let input_pool_address_fields =
+                                        constr_fields_of(input_pool_address_data);
+                                      let input_pool_payment_credential =
+                                        list_first(input_pool_address_fields);
+                                      let output_pool_fields =
+                                        constr_fields_of(single_output_at_address(tx_outputs, input_pool_payment_credential));
+                                      let [output_pool_address_data, after_output_pool_address] =
+                                        output_pool_fields;
+                                      let [output_pool_value_map << unMapData, after_output_pool_value] =
+                                        after_output_pool_address;
+                                      let output_pool_raw_datum =
+                                        list_first(after_output_pool_value);
+                                      assert(and { value_token_amount(input_pool_value_map, pool_policy_id, 0x4d5350) =i= 1, mapData(input_pool_value_map) =d=
+                                        mapData(output_pool_value_map) });
+                                      let output_pool_datum_data =
+                                        inline_output_datum_data(output_pool_raw_datum);
+                                      let output_pool_datum_checked =
+                                        assert_datum_data(output_pool_datum_data);
+                                      let input_pool_datum_fields =
+                                        constr_fields_of(pool_datum);
+                                      let [input_pool_stake_credential, after_input_pool_stake_credential] =
+                                        input_pool_datum_fields;
+                                      let [input_pool_asset_a, after_input_pool_asset_a] =
+                                        after_input_pool_stake_credential;
+                                      let [input_pool_asset_b, after_input_pool_asset_b] =
+                                        after_input_pool_asset_a;
+                                      let [input_pool_total_liquidity << unIData, after_input_pool_total_liquidity] =
+                                        after_input_pool_asset_b;
+                                      let [input_pool_reserve_a << unIData, after_input_pool_reserve_a] =
+                                        after_input_pool_total_liquidity;
+                                      let [input_pool_reserve_b << unIData, after_input_pool_reserve_b] =
+                                        after_input_pool_reserve_a;
+                                      let [input_pool_base_fee_a_numerator << unIData, after_input_pool_base_fee_a] =
+                                        after_input_pool_reserve_b;
+                                      let [input_pool_base_fee_b_numerator << unIData, after_input_pool_base_fee_b] =
+                                        after_input_pool_base_fee_a;
+                                      let [input_pool_fee_sharing_option, after_input_pool_fee_sharing] =
+                                        after_input_pool_base_fee_b;
+                                      let input_pool_allow_dynamic_fee =
+                                        1 =i= list_first_constr_tag(after_input_pool_fee_sharing);
+                                      let output_pool_datum_fields =
+                                        constr_fields_of(output_pool_datum_data);
+                                      let [output_pool_stake_credential, after_output_pool_stake_credential] =
+                                        output_pool_datum_fields;
+                                      let [output_pool_asset_a, after_output_pool_asset_a] =
+                                        after_output_pool_stake_credential;
+                                      let [output_pool_asset_b, after_output_pool_asset_b] =
+                                        after_output_pool_asset_a;
+                                      let [output_pool_total_liquidity << unIData, after_output_pool_total_liquidity] =
+                                        after_output_pool_asset_b;
+                                      let [output_pool_reserve_a << unIData, after_output_pool_reserve_a] =
+                                        after_output_pool_total_liquidity;
+                                      let [output_pool_reserve_b << unIData, after_output_pool_reserve_b] =
+                                        after_output_pool_reserve_a;
+                                      let [output_pool_base_fee_a_numerator << unIData, after_output_pool_base_fee_a] =
+                                        after_output_pool_reserve_b;
+                                      validate_update_datum_transition(input_pool_stake_credential, output_pool_stake_credential, input_pool_asset_a,
+                                        output_pool_asset_a, input_pool_asset_b, output_pool_asset_b, input_pool_total_liquidity, output_pool_total_liquidity,
+                                        input_pool_reserve_a, output_pool_reserve_a, input_pool_reserve_b, output_pool_reserve_b, input_pool_allow_dynamic_fee,
+                                        input_pool_address_data, output_pool_address_data, int_between_inclusive, output_pool_base_fee_a_numerator,
+                                        constr_fields_of, constr_tag_of, input_pool_base_fee_a_numerator, input_pool_base_fee_b_numerator,
+                                        input_pool_fee_sharing_option, pool_datum, output_pool_datum_data, update_action_data, after_output_pool_base_fee_a)(
+                                        list_first_int(after_output_pool_base_fee_a)
+                                      )
+                                    },
+                                  }
+                                }
+                            } else {
+                              #
+                                {
+                                  let tx_info_fields =
+                                    constr_fields_of(tx_info_data);
+                                  let [tx_inputs << unListData, after_tx_inputs] =
+                                    tx_info_fields;
+                                  let [reference_inputs << unListData, after_reference_inputs] =
+                                    after_tx_inputs;
+                                  let [tx_outputs << unListData, after_tx_outputs] =
+                                    after_reference_inputs;
+                                  let after_tx_fee =
+                                    tailList(after_tx_outputs);
+                                  let [tx_mint << unMapData, after_tx_mint] =
+                                    after_tx_fee;
+                                  let after_tx_certificates =
+                                    tailList(after_tx_mint);
+                                  let [tx_withdrawals << unMapData, after_tx_withdrawals] =
+                                    after_tx_certificates;
+                                  let after_validity_range =
+                                    tailList(after_tx_withdrawals);
+                                  let tx_extra_signatories =
+                                    list_first_list(after_validity_range);
+                                  let pool_input_option =
+                                    find_by_first_field(tx_inputs, pool_input_ref_data);
+                                  assert(0 =i= constr_tag_of(pool_input_option));
+                                  let pool_input_option_fields =
+                                    constr_fields_of(pool_input_option);
+                                  let pool_input_data =
+                                    list_first(pool_input_option_fields);
+                                  let pool_input_fields =
+                                    constr_fields_of(pool_input_data);
+                                  let after_pool_input_ref =
+                                    tailList(pool_input_fields);
+                                  let pool_input_output_data =
+                                    list_first(after_pool_input_ref);
+                                  let pool_input_output_fields =
+                                    constr_fields_of(pool_input_output_data);
+                                  let pool_input_address_data =
+                                    list_first(pool_input_output_fields);
+                                  let global_setting_datum =
+                                    find_global_setting_datum(reference_inputs, pool_policy_id);
+                                  let global_setting_fields =
+                                    constr_fields_of(global_setting_datum);
+                                  let after_batcher_authorizers =
+                                    tailList(global_setting_fields);
+                                  let after_pool_fee_updater =
+                                    tailList(after_batcher_authorizers);
+                                  let fee_sharing_taker =
+                                    list_first(after_pool_fee_updater);
+                                  and {
+                                    pool_credential_authorized(fee_sharing_taker, tx_inputs, tx_withdrawals, tx_extra_signatories),
+                                    validate_unique_input_candidate(tx_inputs, pool_input_address_data, fee_sharing_taker),
+                                    value_map_is_empty(remove_ada_policy(tx_mint)),
+                                    {
+                                      let compare_bytes_as_ordering_data =
+                                        compare_bytes_ordering;
+                                      let value_add =
+                                        make_add(constr_tag_of, constr_fields_of, compare_bytes_as_ordering_data);
+                                      let pool_input_fields_for_withdraw =
+                                        constr_fields_of(pool_input_data);
+                                      let after_pool_input_ref_for_withdraw =
+                                        tailList(pool_input_fields_for_withdraw);
+                                      let input_pool_output_data =
+                                        list_first(after_pool_input_ref_for_withdraw);
+                                      let input_pool_output_fields =
+                                        constr_fields_of(input_pool_output_data);
+                                      let [input_pool_address_data, after_input_pool_address] =
+                                        input_pool_output_fields;
+                                      let input_pool_value_map =
+                                        list_first_map(after_input_pool_address);
+                                      let input_pool_address_fields =
+                                        constr_fields_of(input_pool_address_data);
+                                      let input_pool_payment_credential =
+                                        list_first(input_pool_address_fields);
+                                      let output_pool_fields =
+                                        constr_fields_of(single_output_at_address(tx_outputs, input_pool_payment_credential));
+                                      let [output_pool_address_data, after_output_pool_address] =
+                                        output_pool_fields;
+                                      let [output_pool_value_map << unMapData, after_output_pool_value] =
+                                        after_output_pool_address;
+                                      let output_pool_raw_datum =
+                                        list_first(after_output_pool_value);
+                                      let output_pool_datum_data =
+                                        inline_output_datum_data(output_pool_raw_datum);
+                                      let output_pool_datum_checked =
+                                        assert_datum_data(output_pool_datum_data);
+                                      assert(and {
+                                        input_pool_address_data =d= output_pool_address_data,
+                                        pool_datum =d= output_pool_datum_data,
+                                        value_token_amount(input_pool_value_map, pool_policy_id, 0x4d5350) =i= 1
+                                      });
+                                      let input_pool_datum_fields =
+                                        constr_fields_of(pool_datum);
+                                      let after_input_pool_stake_credential =
+                                        tailList(input_pool_datum_fields);
+                                      let [asset_a_data, after_asset_a] =
+                                        after_input_pool_stake_credential;
+                                      let [asset_b_data, after_asset_b] =
+                                        after_asset_a;
+                                      let after_total_liquidity =
+                                        tailList(after_asset_b);
+                                      let [datum_reserve_a << unIData, after_reserve_a] =
+                                        after_total_liquidity;
+                                      let datum_reserve_b =
+                                        list_first_int(after_reserve_a);
+                                      let asset_a_fields =
+                                        constr_fields_of(asset_a_data);
+                                      let [asset_a_policy_id << unBData, after_asset_a_policy_id] =
+                                        asset_a_fields;
+                                      let asset_a_name =
+                                        list_first_bytes(after_asset_a_policy_id);
+                                      let asset_b_fields =
+                                        constr_fields_of(asset_b_data);
+                                      let [asset_b_policy_id << unBData, after_asset_b_policy_id] =
+                                        asset_b_fields;
+                                      let asset_b_name =
+                                        list_first_bytes(after_asset_b_policy_id);
+                                      let value_reserve_a_in =
+                                        value_token_amount(input_pool_value_map, asset_a_policy_id, asset_a_name);
+                                      (
+                                        mapData(output_pool_value_map)
+                                        =d=
+                                        (mapData(
+                                          value_add(value_add(input_pool_value_map, asset_a_policy_id, asset_a_name, datum_reserve_a - !(if (and {
+                                            asset_a_policy_id =b= 0x, asset_a_name =b= 0x }) { #(value_reserve_a_in - 4500000) } else { #value_reserve_a_in })),
+                                            asset_b_policy_id, asset_b_name, datum_reserve_b - value_token_amount(input_pool_value_map, asset_b_policy_id,
+                                            asset_b_name))
+                                        ))
+                                      )
+                                    },
+                                  }
+                                }
+                            }
+                          )
+                      }
+                  }
+                )
+            }
+          ) {
+            #()
+          } else {
+            #
+              proc {
+                !error;
+                error
+              }
+          }
+        )
+    }
+  }
+}

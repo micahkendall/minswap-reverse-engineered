@@ -1,0 +1,2066 @@
+branch "agent/minswap-reverse-engineer";
+module_path "utils/order_helpers";
+
+@captures 4;
+fn assert_routing_list_template(constr_tag_of, constr_fields_of, list_first_constr_tag, validate_asset_pair, assert_swap_routing_list,
+  remaining_routings) {
+  !
+    (chooseList(
+      remaining_routings,
+      #(),
+      # {
+        let routing_shape_checked =
+          {
+            let routing_data =
+              list_first(remaining_routings);
+            let routing_tag =
+              constr_tag_of(routing_data);
+            assert(
+              (
+                0
+                =i=
+                routing_tag
+              )
+            );
+            let routing_fields =
+              constr_fields_of(routing_data);
+            let [routing_lp_asset_data, routing_after_lp_asset] =
+              routing_fields;
+            let routing_a_to_b =
+              (
+                1
+                =i=
+                list_first_constr_tag(routing_after_lp_asset)
+              );
+            !
+              (chooseList(
+                tailList(routing_after_lp_asset),
+                # {
+                  let routing_lp_asset_checked =
+                    validate_asset_pair(routing_lp_asset_data);
+                  ()
+                },
+                #error
+              ))
+          };
+        assert_swap_routing_list(
+          assert_swap_routing_list,
+          tailList(remaining_routings)
+        )
+      }
+    ))
+}
+
+@captures 4;
+fn assert_stake_credential_shape(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, stake_credential_data) {
+  let stake_credential_tag =
+    constr_tag_of(stake_credential_data);
+  !
+    (
+      if (0 =i= stake_credential_tag) {
+        # {
+          let stake_credential_fields =
+            constr_fields_of(stake_credential_data);
+          let stake_credential_hash_data =
+            list_first(stake_credential_fields);
+          !
+            (chooseList(
+              tailList(stake_credential_fields),
+              # {
+                let stake_credential_hash_checked =
+                  assert_tagged_single_byte_data(stake_credential_hash_data);
+                ()
+              },
+              #error
+            ))
+        }
+      } else {
+        # {
+          assert(1 =i= stake_credential_tag);
+          let stake_pointer_fields =
+            constr_fields_of(stake_credential_data);
+          let [stake_pointer_slot << unIData, stake_pointer_tail] =
+            stake_pointer_fields;
+          let [stake_pointer_tx_index << unIData, stake_pointer_after_tx_index] =
+            stake_pointer_tail;
+          let stake_pointer_cert_index =
+            list_first_int(stake_pointer_after_tx_index);
+          !
+            (chooseList(
+              tailList(stake_pointer_after_tx_index),
+              #(),
+              #error
+            ))
+        }
+      }
+    )
+}
+
+@captures 4;
+fn assert_stake_credential_option_shape(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, stake_credential_option_data) {
+  let stake_credential_option_tag =
+    constr_tag_of(stake_credential_option_data);
+  !
+    (
+      if (0 =i= stake_credential_option_tag) {
+        # {
+          let stake_credential_option_fields =
+            constr_fields_of(stake_credential_option_data);
+          let stake_credential_data =
+            list_first(stake_credential_option_fields);
+          !
+            (chooseList(
+              tailList(stake_credential_option_fields),
+              # {
+                let stake_credential_checked =
+                  assert_stake_credential_shape(
+                    constr_tag_of,
+                    constr_fields_of,
+                    assert_tagged_single_byte_data,
+                    stake_credential_data
+                  );
+                ()
+              },
+              #error
+            ))
+        }
+      } else {
+        # {
+          assert(1 =i= stake_credential_option_tag);
+          !
+            (chooseList(constr_fields_of(stake_credential_option_data), #(), #error))
+        }
+      }
+    )
+}
+
+@captures 3;
+fn assert_address_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, address_data) {
+  let address_tag =
+    constr_tag_of(address_data);
+  assert(0 =i= address_tag);
+  let address_fields =
+    constr_fields_of(address_data);
+  let [payment_credential_data, address_field_tail] =
+    address_fields;
+  let stake_credential_option_data =
+    list_first(address_field_tail);
+  !
+    (chooseList(
+      tailList(address_field_tail),
+      # {
+        let payment_credential_checked =
+          assert_tagged_single_byte_data(payment_credential_data);
+        let stake_credential_option_checked =
+          assert_stake_credential_option_shape(
+            constr_tag_of,
+            constr_fields_of,
+            assert_tagged_single_byte_data,
+            stake_credential_option_data
+          );
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 2;
+fn assert_empty_or_hashed_datum_choice_template(constr_tag_of, constr_fields_of, output_datum_data) {
+  let output_datum_tag =
+    constr_tag_of(output_datum_data);
+  !
+    (
+      if (0 =i= output_datum_tag) {
+        #
+          !
+            (chooseList(constr_fields_of(output_datum_data), #(), #error))
+      } else {
+        #
+          !
+            (
+              if (1 =i= output_datum_tag) {
+                # {
+                  let output_datum_fields =
+                    constr_fields_of(output_datum_data);
+                  let output_datum_hash =
+                    list_first_bytes(output_datum_fields);
+                  !
+                    (chooseList(tailList(output_datum_fields), #(), #error))
+                }
+              } else {
+                # {
+                  assert(2 =i= output_datum_tag);
+                  let output_datum_fields =
+                    constr_fields_of(output_datum_data);
+                  let output_datum_hash =
+                    list_first_bytes(output_datum_fields);
+                  !
+                    (chooseList(tailList(output_datum_fields), #(), #error))
+                }
+              }
+            )
+      }
+    )
+}
+
+@captures 4;
+fn assert_cancel_withdraw_imbalance_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_data, order_step_data) {
+  let withdraw_imbalance_fields =
+    constr_fields_of(order_step_data);
+  let [withdraw_imbalance_lp_amount_option_data, withdraw_imbalance_after_lp_amount_option] =
+    withdraw_imbalance_fields;
+  let [withdraw_imbalance_ratio_asset_a << unIData, withdraw_imbalance_after_ratio_asset_a] =
+    withdraw_imbalance_after_lp_amount_option;
+  let [withdraw_imbalance_ratio_asset_b << unIData, withdraw_imbalance_after_ratio_asset_b] =
+    withdraw_imbalance_after_ratio_asset_a;
+  let [withdraw_imbalance_minimum_asset_a << unIData, withdraw_imbalance_after_minimum_asset_a] =
+    withdraw_imbalance_after_ratio_asset_b;
+  let withdraw_imbalance_killable =
+    (
+      1
+      =i=
+      list_first_constr_tag(withdraw_imbalance_after_minimum_asset_a)
+    );
+  !
+    (chooseList(
+      tailList(withdraw_imbalance_after_minimum_asset_a),
+      # {
+        let withdraw_imbalance_lp_amount_option_checked =
+          assert_tagged_single_int_data(withdraw_imbalance_lp_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 6;
+fn assert_cancel_swap_multi_step_shape(constr_fields_of, constr_tag_of, list_first_constr_tag, assert_asset_pair_data,
+  assert_tagged_single_int_bound, order_step_data) {
+  let swap_multi_routing_fields =
+    constr_fields_of(order_step_data);
+  let [swap_multi_routings << unListData, swap_multi_after_routings] =
+    swap_multi_routing_fields;
+  let [swap_multi_amount_option_data, swap_multi_after_amount_option] =
+    swap_multi_after_routings;
+  let swap_multi_minimum_receive =
+    list_first_int(swap_multi_after_amount_option);
+  !
+    (chooseList(
+      tailList(swap_multi_after_amount_option),
+      # {
+        let swap_multi_routings_checked =
+          {
+            let assert_swap_routing_list =
+              assert_routing_list_template(
+                constr_tag_of,
+                constr_fields_of,
+                list_first_constr_tag,
+                assert_asset_pair_data
+              );
+            assert_swap_routing_list(
+              assert_swap_routing_list,
+              swap_multi_routings
+            )
+          };
+        let swap_multi_amount_option_checked =
+          assert_tagged_single_int_bound(swap_multi_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_order_withdraw_imbalance_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_data, order_step_data) {
+  let withdraw_imbalance_fields =
+    constr_fields_of(order_step_data);
+  let [withdraw_imbalance_amount_option_data, withdraw_imbalance_after_amount_option] =
+    withdraw_imbalance_fields;
+  let [withdraw_imbalance_ratio_asset_a << unIData, withdraw_imbalance_after_ratio_asset_a] =
+    withdraw_imbalance_after_amount_option;
+  let [withdraw_imbalance_ratio_asset_b << unIData, withdraw_imbalance_after_ratio_asset_b] =
+    withdraw_imbalance_after_ratio_asset_a;
+  let [withdraw_imbalance_minimum_asset_a << unIData, withdraw_imbalance_after_minimum_asset_a] =
+    withdraw_imbalance_after_ratio_asset_b;
+  let withdraw_imbalance_killable =
+    (
+      1
+      =i=
+      list_first_constr_tag(withdraw_imbalance_after_minimum_asset_a)
+    );
+  !
+    (chooseList(
+      tailList(withdraw_imbalance_after_minimum_asset_a),
+      # {
+        let withdraw_imbalance_amount_option_checked =
+          assert_tagged_single_int_data(withdraw_imbalance_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 7;
+fn assert_order_swap_multi_step_shape(constr_fields_of, assert_each_list_item, constr_tag_of, list_first_constr_tag, validate_asset_pair,
+  assert_tagged_single_int_bound, order_step_data) {
+  let swap_multi_routing_fields =
+    constr_fields_of(order_step_data);
+  let [swap_routings << unListData, swap_multi_after_routings] =
+    swap_multi_routing_fields;
+  let [swap_multi_amount_option_data, swap_multi_after_amount_option] =
+    swap_multi_after_routings;
+  let swap_multi_minimum_receive =
+    list_first_int(swap_multi_after_amount_option);
+  !
+    (chooseList(
+      tailList(swap_multi_after_amount_option),
+      # {
+        let swap_routings_checked =
+          assert_each_list_item(
+            swap_routings,
+            fn (routing_data) {
+              let routing_tag =
+                constr_tag_of(routing_data);
+              assert(
+                (
+                  0
+                  =i=
+                  routing_tag
+                )
+              );
+              let routing_fields =
+                constr_fields_of(routing_data);
+              let [routing_lp_asset_data, routing_after_lp_asset] =
+                routing_fields;
+              let routing_a_to_b =
+                (
+                  1
+                  =i=
+                  list_first_constr_tag(routing_after_lp_asset)
+                );
+              !
+                (chooseList(
+                  tailList(routing_after_lp_asset),
+                  # {
+                    let routing_lp_asset_checked =
+                      validate_asset_pair(routing_lp_asset_data);
+                    ()
+                  },
+                  #error
+                ))
+            }
+          );
+        let swap_multi_amount_option_checked =
+          assert_tagged_single_int_bound(swap_multi_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 2;
+fn assert_canceller_author_hash_shape(constr_fields_of, order_canceller_data) {
+  let canceller_fields =
+    constr_fields_of(order_canceller_data);
+  let canceller_author_hash =
+    list_first_bytes(canceller_fields);
+  !
+    (chooseList(tailList(canceller_fields), #(), #error))
+}
+
+@captures 3;
+fn assert_canceller_shape_after_signature(constr_fields_of, canceller_tag, order_canceller_data) {
+  !
+    (
+      if (2 =i= canceller_tag) {
+        #assert_canceller_author_hash_shape(constr_fields_of, order_canceller_data)
+      } else {
+        # {
+          assert(3 =i= canceller_tag);
+          assert_canceller_author_hash_shape(constr_fields_of, order_canceller_data)
+        }
+      }
+    )
+}
+
+@captures 3;
+fn assert_canceller_shape_after_author(constr_fields_of, canceller_tag, order_canceller_data) {
+  !
+    (
+      if (1 =i= canceller_tag) {
+        #assert_canceller_author_hash_shape(constr_fields_of, order_canceller_data)
+      } else {
+        #assert_canceller_shape_after_signature(constr_fields_of, canceller_tag, order_canceller_data)
+      }
+    )
+}
+
+@captures 3;
+fn assert_canceller_shape_template(constr_tag_of, constr_fields_of, order_canceller_data) {
+  let canceller_tag =
+    constr_tag_of(order_canceller_data);
+  !
+    (
+      if (0 =i= canceller_tag) {
+        #assert_canceller_author_hash_shape(constr_fields_of, order_canceller_data)
+      } else {
+        #assert_canceller_shape_after_author(constr_fields_of, canceller_tag, order_canceller_data)
+      }
+    )
+}
+
+@captures 4;
+fn assert_expiry_setting_shape_template(constr_tag_of, constr_fields_of, data_pair_from_list, order_expiry_setting_data) {
+  let expiry_setting_tag =
+    constr_tag_of(order_expiry_setting_data);
+  !
+    (
+      if (0 =i= expiry_setting_tag) {
+        # {
+          let expiry_setting_fields =
+            constr_fields_of(order_expiry_setting_data);
+          let expiry_value_pair =
+            {
+              let expiry_value_pair_fields =
+                list_first_list(expiry_setting_fields);
+              data_pair_from_list(expiry_value_pair_fields)
+            };
+          !
+            (chooseList(
+              tailList(expiry_setting_fields),
+              # {
+                let expiry_timestamp_checked =
+                  {
+                    let expiry_upper_bound =
+                      unIData(fstPair(expiry_value_pair));
+                    unIData(sndPair(expiry_value_pair))
+                  };
+                ()
+              },
+              #error
+            ))
+        }
+      } else {
+        # {
+          assert(1 =i= expiry_setting_tag);
+          !
+            (chooseList(constr_fields_of(order_expiry_setting_data), #(), #error))
+        }
+      }
+    )
+}
+
+@captures 4;
+fn assert_swap_exact_in_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound, order_step_data) {
+  let swap_exact_in_fields =
+    constr_fields_of(order_step_data);
+  let swap_exact_in_a_to_b =
+    1 =i= list_first_constr_tag(swap_exact_in_fields);
+  let swap_exact_in_after_direction =
+    tailList(swap_exact_in_fields);
+  let [swap_exact_in_amount_option_data, swap_exact_in_after_amount_option] =
+    swap_exact_in_after_direction;
+  let [swap_exact_in_minimum_receive << unIData, swap_exact_in_after_minimum_receive] =
+    swap_exact_in_after_amount_option;
+  let swap_exact_in_killable =
+    1 =i= list_first_constr_tag(swap_exact_in_after_minimum_receive);
+  !
+    (chooseList(
+      tailList(swap_exact_in_after_minimum_receive),
+      # {
+        let swap_exact_in_amount_option_checked =
+          assert_tagged_single_int_bound(swap_exact_in_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_stop_loss_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound, order_step_data) {
+  let stop_loss_fields =
+    constr_fields_of(order_step_data);
+  let stop_loss_a_to_b =
+    1 =i= list_first_constr_tag(stop_loss_fields);
+  let stop_loss_after_direction =
+    tailList(stop_loss_fields);
+  let [stop_loss_amount_option_data, stop_loss_after_amount_option] =
+    stop_loss_after_direction;
+  let stop_loss_receive =
+    list_first_int(stop_loss_after_amount_option);
+  !
+    (chooseList(
+      tailList(stop_loss_after_amount_option),
+      # {
+        let stop_loss_amount_option_checked =
+          assert_tagged_single_int_bound(stop_loss_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_oco_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound, order_step_data) {
+  let oco_fields =
+    constr_fields_of(order_step_data);
+  let oco_a_to_b =
+    1 =i= list_first_constr_tag(oco_fields);
+  let oco_after_direction =
+    tailList(oco_fields);
+  let [oco_amount_option_data, oco_after_amount_option] =
+    oco_after_direction;
+  let [oco_minimum_receive << unIData, oco_after_minimum_receive] =
+    oco_after_amount_option;
+  let oco_stop_loss_receive =
+    list_first_int(oco_after_minimum_receive);
+  !
+    (chooseList(
+      tailList(oco_after_minimum_receive),
+      # {
+        let oco_amount_option_checked =
+          assert_tagged_single_int_bound(oco_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_swap_exact_out_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound, order_step_data) {
+  let swap_exact_out_fields =
+    constr_fields_of(order_step_data);
+  let swap_exact_out_a_to_b =
+    1 =i= list_first_constr_tag(swap_exact_out_fields);
+  let swap_exact_out_after_direction =
+    tailList(swap_exact_out_fields);
+  let [swap_exact_out_max_amount_option_data, swap_exact_out_after_amount_option] =
+    swap_exact_out_after_direction;
+  let [swap_exact_out_expected_receive << unIData, swap_exact_out_after_expected_receive] =
+    swap_exact_out_after_amount_option;
+  let swap_exact_out_killable =
+    1 =i= list_first_constr_tag(swap_exact_out_after_expected_receive);
+  !
+    (chooseList(
+      tailList(swap_exact_out_after_expected_receive),
+      # {
+        let swap_exact_out_amount_option_checked =
+          assert_tagged_single_int_bound(swap_exact_out_max_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_zap_out_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_data, order_step_data) {
+  let zap_out_fields =
+    constr_fields_of(order_step_data);
+  let zap_out_a_to_b =
+    (
+      1
+      =i=
+      list_first_constr_tag(zap_out_fields)
+    );
+  let zap_out_after_direction =
+    tailList(zap_out_fields);
+  let [zap_out_lp_amount_option_data, zap_out_after_amount_option] =
+    zap_out_after_direction;
+  let [zap_out_minimum_receive << unIData, zap_out_after_minimum_receive] =
+    zap_out_after_amount_option;
+  let zap_out_killable =
+    (
+      1
+      =i=
+      list_first_constr_tag(zap_out_after_minimum_receive)
+    );
+  !
+    (chooseList(
+      tailList(zap_out_after_minimum_receive),
+      # {
+        let zap_out_lp_amount_option_checked =
+          assert_tagged_single_int_data(zap_out_lp_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 3;
+fn assert_partial_swap_step_shape(constr_fields_of, list_first_constr_tag, order_step_data) {
+  let partial_swap_fields =
+    constr_fields_of(order_step_data);
+  let partial_swap_a_to_b =
+    (
+      1
+      =i=
+      list_first_constr_tag(partial_swap_fields)
+    );
+  let partial_swap_after_direction =
+    tailList(partial_swap_fields);
+  let [partial_swap_total_swap_amount << unIData, partial_swap_after_total_amount] =
+    partial_swap_after_direction;
+  let [partial_swap_io_ratio_numerator << unIData, partial_swap_after_ratio_numerator] =
+    partial_swap_after_total_amount;
+  let [partial_swap_io_ratio_denominator << unIData, partial_swap_after_ratio_denominator] =
+    partial_swap_after_ratio_numerator;
+  let [partial_swap_hops << unIData, partial_swap_after_hops] =
+    partial_swap_after_ratio_denominator;
+  let [partial_swap_minimum_swap_amount_required << unIData, partial_swap_after_minimum_required] =
+    partial_swap_after_hops;
+  let partial_swap_max_batcher_fee_each_time =
+    list_first_int(partial_swap_after_minimum_required);
+  !
+    (chooseList(
+      tailList(partial_swap_after_minimum_required),
+      #(),
+      #error
+    ))
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_tail_after_partial(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound,
+  assert_tagged_single_int_data, assert_asset_pair_data, order_step_tag, order_step_data) {
+  !
+    (
+      if (8 =i= order_step_tag) {
+        #assert_cancel_withdraw_imbalance_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #
+          !
+            (
+              if (9 =i= order_step_tag) {
+                #assert_cancel_swap_multi_step_shape(
+                  constr_fields_of,
+                  constr_tag_of,
+                  list_first_constr_tag,
+                  assert_asset_pair_data,
+                  assert_tagged_single_int_bound,
+                  order_step_data
+                )
+              } else {
+                # {
+                  assert(
+                    (
+                      10
+                      =i=
+                      order_step_tag
+                    )
+                  );
+                  !
+                    (chooseList(
+                      constr_fields_of(order_step_data),
+                      #(),
+                      #error
+                    ))
+                }
+              }
+            )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_tail_after_partial(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (8 =i= order_step_tag) {
+        #assert_order_withdraw_imbalance_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #
+          !
+            (
+              if (9 =i= order_step_tag) {
+                #assert_order_swap_multi_step_shape(
+                  constr_fields_of,
+                  assert_each_list_item,
+                  constr_tag_of,
+                  list_first_constr_tag,
+                  validate_asset_pair,
+                  assert_tagged_single_int_bound,
+                  order_step_data
+                )
+              } else {
+                # {
+                  assert(
+                    (
+                      10
+                      =i=
+                      order_step_tag
+                    )
+                  );
+                  !
+                    (chooseList(
+                      constr_fields_of(order_step_data),
+                      #(),
+                      #error
+                    ))
+                }
+              }
+            )
+      }
+    )
+}
+
+@captures 3;
+fn assert_deposit_amount_option_shape(constr_tag_of, constr_fields_of, deposit_amount_option_data) {
+  let deposit_amount_option_tag =
+    constr_tag_of(deposit_amount_option_data);
+  !
+    (
+      if (0 =i= deposit_amount_option_tag) {
+        # {
+          let specific_deposit_fields =
+            constr_fields_of(deposit_amount_option_data);
+          let [specific_deposit_amount_a << unIData, specific_deposit_tail] =
+            specific_deposit_fields;
+          let specific_deposit_amount_b =
+            list_first_int(specific_deposit_tail);
+          !
+            (chooseList(
+              tailList(specific_deposit_tail),
+              #(),
+              #error
+            ))
+        }
+      } else {
+        # {
+          assert(1 =i= deposit_amount_option_tag);
+          let all_deposit_fields =
+            constr_fields_of(deposit_amount_option_data);
+          let [all_deposit_deducted_amount_a << unIData, all_deposit_tail] =
+            all_deposit_fields;
+          let all_deposit_deducted_amount_b =
+            list_first_int(all_deposit_tail);
+          !
+            (chooseList(
+              tailList(all_deposit_tail),
+              #(),
+              #error
+            ))
+        }
+      }
+    )
+}
+
+@captures 4;
+fn assert_deposit_step_shape(constr_tag_of, constr_fields_of, list_first_constr_tag, order_step_data) {
+  let deposit_fields =
+    constr_fields_of(order_step_data);
+  let [deposit_amount_option_data, deposit_after_amount_option] =
+    deposit_fields;
+  let [deposit_minimum_lp << unIData, deposit_after_minimum_lp] =
+    deposit_after_amount_option;
+  let deposit_killable =
+    1 =i= list_first_constr_tag(deposit_after_minimum_lp);
+  !
+    (chooseList(
+      tailList(deposit_after_minimum_lp),
+      # {
+        let deposit_amount_option_checked =
+          assert_deposit_amount_option_shape(constr_tag_of, constr_fields_of, deposit_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 4;
+fn assert_withdraw_step_shape(constr_fields_of, list_first_constr_tag, assert_tagged_single_int_data, order_step_data) {
+  let withdraw_fields =
+    constr_fields_of(order_step_data);
+  let [withdraw_amount_option_data, withdraw_after_amount_option] =
+    withdraw_fields;
+  let [withdraw_minimum_asset_a << unIData, withdraw_after_minimum_asset_a] =
+    withdraw_after_amount_option;
+  let [withdraw_minimum_asset_b << unIData, withdraw_after_minimum_asset_b] =
+    withdraw_after_minimum_asset_a;
+  let withdraw_killable =
+    1 =i= list_first_constr_tag(withdraw_after_minimum_asset_b);
+  !
+    (chooseList(
+      tailList(withdraw_after_minimum_asset_b),
+      # {
+        let withdraw_amount_option_checked =
+          assert_tagged_single_int_data(withdraw_amount_option_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_tail_after_withdraw(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (6 =i= order_step_tag) {
+        #assert_zap_out_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #
+          !
+            (
+              if (7 =i= order_step_tag) {
+                #assert_partial_swap_step_shape(
+                  constr_fields_of,
+                  list_first_constr_tag,
+                  order_step_data
+                )
+              } else {
+                #assert_cancel_order_step_shape_tail_after_partial(
+                  constr_tag_of,
+                  constr_fields_of,
+                  list_first_constr_tag,
+                  assert_tagged_single_int_bound,
+                  assert_tagged_single_int_data,
+                  assert_asset_pair_data,
+                  order_step_tag,
+                  order_step_data
+                )
+              }
+            )
+      }
+    )
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_tail_after_deposit(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (5 =i= order_step_tag) {
+        #assert_withdraw_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_tail_after_withdraw(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_tail_after_withdraw(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (6 =i= order_step_tag) {
+        #assert_zap_out_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #
+          !
+            (
+              if (7 =i= order_step_tag) {
+                #assert_partial_swap_step_shape(
+                  constr_fields_of,
+                  list_first_constr_tag,
+                  order_step_data
+                )
+              } else {
+                #assert_order_step_shape_tail_after_partial(
+                  constr_tag_of,
+                  constr_fields_of,
+                  list_first_constr_tag,
+                  assert_each_list_item,
+                  validate_asset_pair,
+                  assert_tagged_single_int_bound,
+                  assert_tagged_single_int_data,
+                  order_step_tag,
+                  order_step_data
+                )
+              }
+            )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_tail_after_deposit(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (5 =i= order_step_tag) {
+        #assert_withdraw_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_data,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_tail_after_withdraw(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_tail(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound,
+  assert_tagged_single_int_data, assert_asset_pair_data, order_step_tag, order_step_data) {
+  !
+    (
+      if (4 =i= order_step_tag) {
+        #assert_deposit_step_shape(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_tail_after_deposit(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_tail(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_each_list_item, validate_asset_pair,
+  assert_tagged_single_int_bound, assert_tagged_single_int_data, order_step_tag, order_step_data) {
+  !
+    (
+      if (4 =i= order_step_tag) {
+        #assert_deposit_step_shape(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_tail_after_deposit(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_after_oco(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (3 =i= order_step_tag) {
+        #assert_swap_exact_out_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_tail(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_after_stop_loss(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (2 =i= order_step_tag) {
+        #assert_oco_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_after_oco(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 8;
+fn assert_cancel_order_step_shape_after_swap_exact_in(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (1 =i= order_step_tag) {
+        #assert_stop_loss_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_after_stop_loss(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_after_oco(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (3 =i= order_step_tag) {
+        #assert_swap_exact_out_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_tail(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_after_stop_loss(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (2 =i= order_step_tag) {
+        #assert_oco_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_after_oco(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 9;
+fn assert_order_step_shape_after_swap_exact_in(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  order_step_tag,
+  order_step_data
+) {
+  !
+    (
+      if (1 =i= order_step_tag) {
+        #assert_stop_loss_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_after_stop_loss(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 7;
+fn assert_cancel_order_step_shape_template(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_tagged_single_int_bound,
+  assert_tagged_single_int_data, assert_asset_pair_data, order_step_data) {
+  let order_step_tag =
+    constr_tag_of(order_step_data);
+  !
+    (
+      if (0 =i= order_step_tag) {
+        #assert_swap_exact_in_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_cancel_order_step_shape_after_swap_exact_in(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          assert_asset_pair_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 8;
+fn assert_order_step_shape_template(constr_tag_of, constr_fields_of, list_first_constr_tag, assert_each_list_item, validate_asset_pair,
+  assert_tagged_single_int_bound, assert_tagged_single_int_data, order_step_data) {
+  let order_step_tag =
+    constr_tag_of(order_step_data);
+  !
+    (
+      if (0 =i= order_step_tag) {
+        #assert_swap_exact_in_step_shape(
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_tagged_single_int_bound,
+          order_step_data
+        )
+      } else {
+        #assert_order_step_shape_after_swap_exact_in(
+          constr_tag_of,
+          constr_fields_of,
+          list_first_constr_tag,
+          assert_each_list_item,
+          validate_asset_pair,
+          assert_tagged_single_int_bound,
+          assert_tagged_single_int_data,
+          order_step_tag,
+          order_step_data
+        )
+      }
+    )
+}
+
+@captures 3;
+fn expected_cancel_refund_datum_choice(constr_tag_of, constr_fields_of, output_datum_choice_data) {
+  let credential_tag =
+    constr_tag_of(output_datum_choice_data);
+  !
+    (
+      if (0 =i= credential_tag) {
+        #data(constr 0 [])
+      } else {
+        #
+          !
+            (
+              if (1 =i= credential_tag) {
+                #
+                  (constrData(
+                    1,
+                    mkCons(
+                      list_first(constr_fields_of(output_datum_choice_data)),
+                      list<data>[]
+                    )
+                  ))
+              } else {
+                #
+                  (constrData(
+                    2,
+                    mkCons(
+                      bData(
+                        blake2b_256(
+                          serialiseData(list_first(constr_fields_of(output_datum_choice_data)))
+                        )
+                      ),
+                      list<data>[]
+                    )
+                  ))
+              }
+            )
+      }
+    )
+}
+
+@captures 14;
+fn validate_cancel_output_value(
+  constr_tag_of,
+  valid_from_time,
+  expected_refund_address,
+  actual_output_address,
+  ada_amount_of,
+  spent_order_value,
+  continuing_output_value,
+  remove_ada_policy,
+  expected_refund_datum_choice,
+  constr_fields_of,
+  output_datum_choice_data,
+  remaining_spent_order_inputs,
+  continue_cancel_outputs,
+  remaining_continuing_outputs,
+  expiry_setting_data
+) {
+  assert(0 =i= constr_tag_of(expiry_setting_data));
+  let expiry_setting_fields =
+    constr_fields_of(expiry_setting_data);
+  let expiry_value_pair =
+    {
+      let expiry_value_pair_fields =
+        list_first_list(expiry_setting_fields);
+      data_pair_from_list(expiry_value_pair_fields)
+    };
+  let expiry_value_pair_index =
+    unIData(fstPair(expiry_value_pair));
+  let expiry_value_pair_amount =
+    unIData(sndPair(expiry_value_pair));
+  assert(
+    (
+      and {
+        expiry_value_pair_index < valid_from_time,
+        expected_refund_address =d= actual_output_address,
+        ada_amount_of(spent_order_value) - expiry_value_pair_amount <= ada_amount_of(continuing_output_value),
+        mapData(remove_ada_policy(continuing_output_value)) =d= mapData(remove_ada_policy(spent_order_value)),
+        (
+          expected_refund_datum_choice
+          =d=
+          expected_cancel_refund_datum_choice(constr_tag_of, constr_fields_of, output_datum_choice_data)
+        ),
+      }
+    )
+  );
+  or {
+    listData(remaining_spent_order_inputs) =d= data([]),
+    continue_cancel_outputs(
+      continue_cancel_outputs,
+      remaining_spent_order_inputs,
+      remaining_continuing_outputs
+    )
+  }
+}
+
+@captures 2;
+fn cancel_value_ada_amount_template(constr_tag_of, constr_fields_of, value_map) {
+  let ada_policy_option =
+    {
+      fn find_ada_policy_entry(find_ada_policy_entry, remaining_policies) {
+        !
+          (chooseList(
+            remaining_policies,
+            #data(constr 1 []),
+            # {
+              let [policy_entry, remaining_after_policy] =
+                remaining_policies;
+              let policy_id =
+                unBData(fstPair(policy_entry));
+              let policy_assets =
+                unMapData(sndPair(policy_entry));
+              !
+                (
+                  if (0x =b= policy_id) {
+                    #
+                      (constrData(0, mkCons(mapData(policy_assets), list<data>[])))
+                  } else {
+                    #
+                      (find_ada_policy_entry(find_ada_policy_entry, remaining_after_policy))
+                  }
+                )
+            }
+          ))
+      }
+      find_ada_policy_entry(find_ada_policy_entry, value_map)
+    };
+  let ada_asset_option =
+    {
+      let ada_policy_option_tag =
+        constr_tag_of(ada_policy_option);
+      !
+        (
+          if (1 =i= ada_policy_option_tag) {
+            #data(constr 1 [])
+          } else {
+            # {
+              let ada_policy_assets =
+                list_first_map(constr_fields_of(ada_policy_option));
+              fn find_ada_asset_entry(find_ada_asset_entry, remaining_assets) {
+                !
+                  (chooseList(
+                    remaining_assets,
+                    #data(constr 1 []),
+                    # {
+                      let [asset_entry, remaining_after_asset] =
+                        remaining_assets;
+                      let asset_name =
+                        unBData(fstPair(asset_entry));
+                      let asset_amount =
+                        unIData(sndPair(asset_entry));
+                      !
+                        (
+                          if (0x =b= asset_name) {
+                            #
+                              (constrData(0, mkCons(iData(asset_amount), list<data>[])))
+                          } else {
+                            #
+                              (find_ada_asset_entry(find_ada_asset_entry, remaining_after_asset))
+                          }
+                        )
+                    }
+                  ))
+              }
+              find_ada_asset_entry(find_ada_asset_entry, ada_policy_assets)
+            }
+          }
+        )
+    };
+  let ada_asset_option_tag =
+    constr_tag_of(ada_asset_option);
+  !
+    (if (1 =i= ada_asset_option_tag) { #0 } else { #list_first_int(constr_fields_of(ada_asset_option)) })
+}
+
+@captures 1;
+fn cancel_remove_ada_policy_template(_capture, value_map) {
+  zcom fn (remove_ada_entries, remaining_policies) {
+    !
+      (chooseList(
+        remaining_policies,
+        #list<pair<data, data>>[],
+        # {
+          let [policy_entry, remaining_after_policy] =
+            remaining_policies;
+          let policy_id =
+            unBData(fstPair(policy_entry));
+          let policy_assets =
+            unMapData(sndPair(policy_entry));
+          !
+            (
+              if (0x =b= policy_id) {
+                #remaining_after_policy
+              } else {
+                #
+                  (mkCons(
+                    mkPairData(bData(policy_id), mapData(policy_assets)),
+                    remove_ada_entries(remove_ada_entries, remaining_after_policy)
+                  ))
+              }
+            )
+        }
+      ))
+  }(value_map)
+}
+
+@captures 2;
+fn filter_credential_inputs_template(constr_fields_of, constr_tag_of, filter_script_credential_inputs, remaining_inputs) {
+  !
+    (chooseList(
+      remaining_inputs,
+      #list<data>[],
+      # {
+        let [input_data, remaining_after_input] =
+          remaining_inputs;
+        !
+          (
+            if (
+              {
+                let input_fields =
+                  constr_fields_of(input_data);
+                let input_after_output_ref =
+                  tailList(input_fields);
+                let input_output_data =
+                  list_first(input_after_output_ref);
+                let output_fields =
+                  constr_fields_of(input_output_data);
+                let output_address_data =
+                  list_first(output_fields);
+                let address_fields =
+                  constr_fields_of(output_address_data);
+                let payment_credential_data =
+                  list_first(address_fields);
+                let payment_credential_tag =
+                  constr_tag_of(payment_credential_data);
+                and { 1 =i= payment_credential_tag, True }
+              }
+            ) {
+              #
+                (mkCons(input_data, filter_script_credential_inputs(filter_script_credential_inputs, remaining_after_input)))
+            } else {
+              #
+                (filter_script_credential_inputs(filter_script_credential_inputs, remaining_after_input))
+            }
+          )
+      }
+    ))
+}
+
+@captures 4;
+fn resolve_cancel_order_datum(constr_tag_of, constr_fields_of, tx_datums, output_datum_choice) {
+  let output_datum_tag =
+    constr_tag_of(output_datum_choice);
+  !
+    (
+      if (2 =i= output_datum_tag) {
+        #
+          list_first(constr_fields_of(output_datum_choice))
+      } else {
+        # {
+          assert(1 =i= output_datum_tag);
+          let output_datum_hash =
+            list_first_bytes(constr_fields_of(output_datum_choice));
+          fn lookup_datum_by_hash(lookup_datum_by_hash, remaining_datums) {
+            !
+              (chooseList(
+                remaining_datums,
+                #error,
+                # {
+                  let [datum_entry, remaining_datums_after_entry] =
+                    remaining_datums;
+                  let datum_entry_hash =
+                    unBData(fstPair(datum_entry));
+                  let datum_entry_value =
+                    sndPair(datum_entry);
+                  !
+                    (
+                      if (output_datum_hash =b= datum_entry_hash) {
+                        #datum_entry_value
+                      } else {
+                        #lookup_datum_by_hash(
+                          lookup_datum_by_hash,
+                          remaining_datums_after_entry
+                        )
+                      }
+                    )
+                }
+              ))
+          }
+          lookup_datum_by_hash(lookup_datum_by_hash, tx_datums)
+        }
+      }
+    )
+}
+
+@captures 10;
+fn assert_cancel_order_datum_shape(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_asset_pair_data,
+  assert_address_data,
+  assert_output_datum_choice_data,
+  data_pair_from_list,
+  order_datum_data
+) {
+  let order_datum_tag =
+    constr_tag_of(order_datum_data);
+  assert(0 =i= order_datum_tag);
+  let order_datum_fields =
+    constr_fields_of(order_datum_data);
+  let [order_canceller_data, after_order_canceller] =
+    order_datum_fields;
+  let [refund_receiver_address_data, after_refund_receiver_address] =
+    after_order_canceller;
+  let [refund_receiver_datum_choice_data, after_refund_receiver_datum_choice] =
+    after_refund_receiver_address;
+  let [success_receiver_address_data, after_success_receiver_address] =
+    after_refund_receiver_datum_choice;
+  let [success_receiver_datum_choice_data, after_success_receiver_datum_choice] =
+    after_success_receiver_address;
+  let [order_lp_asset_data, after_order_lp_asset] =
+    after_success_receiver_datum_choice;
+  let [order_step_data, after_order_step] =
+    after_order_lp_asset;
+  let [max_order_batcher_fee << unIData, after_max_order_batcher_fee] =
+    after_order_step;
+  let order_expiry_setting_data =
+    list_first(after_max_order_batcher_fee);
+  !
+    (chooseList(
+      tailList(after_max_order_batcher_fee),
+      # {
+        let canceller_shape_checked =
+          assert_canceller_shape_template(constr_tag_of, constr_fields_of, order_canceller_data);
+        let refund_receiver_checked =
+          assert_address_data(refund_receiver_address_data);
+        let refund_receiver_datum_checked =
+          assert_output_datum_choice_data(refund_receiver_datum_choice_data);
+        let success_receiver_checked =
+          assert_address_data(success_receiver_address_data);
+        let success_receiver_datum_checked =
+          assert_output_datum_choice_data(success_receiver_datum_choice_data);
+        let lp_asset_checked =
+          assert_asset_pair_data(order_lp_asset_data);
+        let order_step_shape_checked =
+          assert_cancel_order_step_shape_template(
+            constr_tag_of,
+            constr_fields_of,
+            list_first_constr_tag,
+            assert_tagged_single_int_bound,
+            assert_tagged_single_int_data,
+            assert_asset_pair_data,
+            order_step_data
+          );
+        let expiry_setting_checked =
+          assert_expiry_setting_shape_template(constr_tag_of, constr_fields_of, data_pair_from_list, order_expiry_setting_data);
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 14;
+fn validate_cancel_output_pairs_template(
+  constr_fields_of,
+  constr_tag_of,
+  tx_datums,
+  assert_address_data,
+  assert_output_datum_choice_data,
+  assert_asset_pair_data,
+  list_first_constr_tag,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  data_pair_from_list,
+  start_valid_time_range,
+  value_ada_amount,
+  remove_ada_policy,
+  validate_cancel_output_value,
+  validate_cancel_output_pairs,
+  spent_outputs,
+  continuing_outputs
+) {
+  let [spent_order_input_data, remaining_spent_order_inputs] =
+    spent_outputs;
+  let [continuing_cancel_output_data, remaining_continuing_outputs] =
+    continuing_outputs;
+  let spent_order_input_fields =
+    constr_fields_of(spent_order_input_data);
+  let spent_order_input_after_ref =
+    tailList(spent_order_input_fields);
+  let spent_order_output_data =
+    list_first(spent_order_input_after_ref);
+  let spent_order_output_fields =
+    constr_fields_of(spent_order_output_data);
+  let spent_order_output_after_address =
+    tailList(spent_order_output_fields);
+  let [spent_order_value << unMapData, spent_order_output_after_value] =
+    spent_order_output_after_address;
+  let spent_order_output_datum_choice =
+    list_first(spent_order_output_after_value);
+  let continuing_output_fields =
+    constr_fields_of(continuing_cancel_output_data);
+  let [continuing_output_address_data, continuing_output_after_address] =
+    continuing_output_fields;
+  let [continuing_output_value << unMapData, continuing_output_after_value] =
+    continuing_output_after_address;
+  let continuing_output_datum_choice =
+    list_first(continuing_output_after_value);
+  let order_datum_data =
+    resolve_cancel_order_datum(constr_tag_of, constr_fields_of, tx_datums, spent_order_output_datum_choice);
+  let order_datum_shape_checked =
+    assert_cancel_order_datum_shape(
+      constr_tag_of,
+      constr_fields_of,
+      list_first_constr_tag,
+      assert_tagged_single_int_bound,
+      assert_tagged_single_int_data,
+      assert_asset_pair_data,
+      assert_address_data,
+      assert_output_datum_choice_data,
+      data_pair_from_list,
+      order_datum_data
+    );
+  let cancel_datum_fields =
+    constr_fields_of(order_datum_data);
+  let cancel_after_order_canceller =
+    tailList(cancel_datum_fields);
+  let [cancel_refund_receiver_address_data, cancel_after_refund_receiver_address] =
+    cancel_after_order_canceller;
+  let [cancel_refund_receiver_datum_choice_data, cancel_after_refund_receiver_datum_choice] =
+    cancel_after_refund_receiver_address;
+  let cancel_after_success_receiver_address =
+    tailList(cancel_after_refund_receiver_datum_choice);
+  let cancel_after_success_receiver_datum_choice =
+    tailList(cancel_after_success_receiver_address);
+  let cancel_after_order_lp_asset =
+    tailList(cancel_after_success_receiver_datum_choice);
+  let cancel_after_order_step =
+    tailList(cancel_after_order_lp_asset);
+  let cancel_after_max_order_batcher_fee =
+    tailList(cancel_after_order_step);
+  validate_cancel_output_value(
+    constr_tag_of,
+    start_valid_time_range,
+    cancel_refund_receiver_address_data,
+    continuing_output_address_data,
+    value_ada_amount,
+    spent_order_value,
+    continuing_output_value,
+    remove_ada_policy,
+    cancel_refund_receiver_datum_choice_data,
+    constr_fields_of,
+    continuing_output_datum_choice,
+    remaining_spent_order_inputs,
+    validate_cancel_output_pairs,
+    remaining_continuing_outputs
+  )(
+    list_first(cancel_after_max_order_batcher_fee)
+  )
+}
+
+@captures 5;
+fn expiry_allows_batch(constr_tag_of, constr_fields_of, data_pair_from_list, order_expiry_setting_data, validity_midpoint_time) {
+  let expiry_setting_tag =
+    constr_tag_of(order_expiry_setting_data);
+  or {
+    1 =i= expiry_setting_tag,
+    {
+      let expiry_setting_fields =
+        constr_fields_of(order_expiry_setting_data);
+      (
+        validity_midpoint_time
+        <=
+        (unIData(
+          fstPair(
+            {
+              let expiry_value_pair_fields =
+                list_first_list(expiry_setting_fields);
+              data_pair_from_list(expiry_value_pair_fields)
+            }
+          )
+        ))
+      )
+    },
+  }
+}
+
+@captures 2;
+fn assert_step_template(constr_tag_of, constr_fields_of, order_step_data) {
+  let order_step_tag =
+    constr_tag_of(order_step_data);
+  !
+    (
+      if (0 =i= order_step_tag) {
+        # {
+          let order_step_fields =
+            constr_fields_of(order_step_data);
+          let swap_amount =
+            list_first_int(order_step_fields);
+          !
+            (chooseList(tailList(order_step_fields), #(), #error))
+        }
+      } else {
+        # {
+          assert(1 =i= order_step_tag);
+          !
+            (chooseList(constr_fields_of(order_step_data), #(), #error))
+        }
+      }
+    )
+}
+
+@captures 3;
+fn assert_step_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, pool_step_data) {
+  let pool_step_tag =
+    constr_tag_of(pool_step_data);
+  !
+    (
+      if (0 =i= pool_step_tag) {
+        # {
+          let pool_step_fields =
+            constr_fields_of(pool_step_data);
+          let tagged_step_data =
+            list_first(pool_step_fields);
+          !
+            (chooseList(
+              tailList(pool_step_fields),
+              # {
+                let tagged_step_checked =
+                  assert_tagged_single_byte_data(tagged_step_data);
+                ()
+              },
+              #error
+            ))
+        }
+      } else {
+        # {
+          assert(1 =i= pool_step_tag);
+          let pool_step_fields =
+            constr_fields_of(pool_step_data);
+          let [first_step_index << unIData, after_first_step_index] =
+            pool_step_fields;
+          let [second_step_index << unIData, after_second_step_index] =
+            after_first_step_index;
+          let third_step_index =
+            list_first_int(after_second_step_index);
+          !
+            (chooseList(tailList(after_second_step_index), #(), #error))
+        }
+      }
+    )
+}
+
+@captures 0;
+fn check_each_list_item(list_items, item_checker) {
+  zcom fn (check_items, remaining_items) {
+    !
+      (chooseList(
+        remaining_items,
+        #(),
+        # {
+          let item_checked =
+            item_checker(list_first(remaining_items));
+          check_items(check_items, tailList(remaining_items))
+        }
+      ))
+  }(list_items)
+}
+
+@captures 0;
+fn assert_fee_data(order_fee_data) {
+  unIData(order_fee_data)
+}
+
+@captures 1;
+fn assert_step_entry_template(assert_order_step, order_step_data) {
+  assert_order_step(order_step_data)
+}
+
+@captures 1;
+fn assert_authorizer_choice_template(assert_pool_choice_bytes_data, authorizer_data) {
+  assert_pool_choice_bytes_data(authorizer_data)
+}
+
+@captures 4;
+fn assert_asset_data_template(constr_tag_of, constr_fields_of, assert_tagged_single_byte_data, assert_step_data, order_asset_data) {
+  let order_asset_tag =
+    constr_tag_of(order_asset_data);
+  assert(0 =i= order_asset_tag);
+  let order_asset_fields =
+    constr_fields_of(order_asset_data);
+  let [asset_data, after_asset_data] =
+    order_asset_fields;
+  let routing_step_option_data =
+    list_first(after_asset_data);
+  !
+    (chooseList(
+      tailList(after_asset_data),
+      # {
+        let asset_checked =
+          assert_tagged_single_byte_data(asset_data);
+        let routing_step_option_checked =
+          {
+            let routing_step_option_tag =
+              constr_tag_of(routing_step_option_data);
+            !
+              (
+                if (0 =i= routing_step_option_tag) {
+                  # {
+                    let routing_step_fields =
+                      constr_fields_of(routing_step_option_data);
+                    let routing_step_data =
+                      list_first(routing_step_fields);
+                    !
+                      (chooseList(
+                        tailList(routing_step_fields),
+                        # {
+                          let routing_step_checked =
+                            assert_step_data(routing_step_data);
+                          ()
+                        },
+                        #error
+                      ))
+                  }
+                } else {
+                  # {
+                    assert(1 =i= routing_step_option_tag);
+                    !
+                      (chooseList(constr_fields_of(routing_step_option_data), #(), #error))
+                  }
+                }
+              )
+          };
+        ()
+      },
+      #error
+    ))
+}
+
+@captures 2;
+fn assert_choice_data_template(constr_tag_of, constr_fields_of, choice_data) {
+  let choice_tag =
+    constr_tag_of(choice_data);
+  !
+    (
+      if (0 =i= choice_tag) {
+        #
+          !
+            (chooseList(constr_fields_of(choice_data), #(), #error))
+      } else {
+        #
+          !
+            (
+              if (1 =i= choice_tag) {
+                # {
+                  let choice_fields =
+                    constr_fields_of(choice_data);
+                  let choice_bytes =
+                    list_first_bytes(choice_fields);
+                  !
+                    (chooseList(tailList(choice_fields), #(), #error))
+                }
+              } else {
+                # {
+                  assert(2 =i= choice_tag);
+                  let choice_fields =
+                    constr_fields_of(choice_data);
+                  let choice_bytes =
+                    list_first_bytes(choice_fields);
+                  !
+                    (chooseList(tailList(choice_fields), #(), #error))
+                }
+              }
+            )
+      }
+    )
+}
+
+@captures 10;
+fn assert_datum_shape_template(
+  constr_tag_of,
+  constr_fields_of,
+  list_first_constr_tag,
+  data_pair_from_list,
+  assert_each_list_item,
+  validate_asset_pair,
+  assert_tagged_single_int_bound,
+  assert_tagged_single_int_data,
+  assert_order_asset_data,
+  assert_order_choice_data,
+  order_datum_data
+) {
+  let order_datum_tag =
+    constr_tag_of(order_datum_data);
+  assert(0 =i= order_datum_tag);
+  let order_datum_fields =
+    constr_fields_of(order_datum_data);
+  let [order_canceller_data, after_order_canceller] =
+    order_datum_fields;
+  let [refund_receiver_asset_data, after_refund_receiver_asset] =
+    after_order_canceller;
+  let [refund_receiver_datum_choice_data, after_refund_receiver_datum_choice] =
+    after_refund_receiver_asset;
+  let [success_receiver_asset_data, after_success_receiver_asset] =
+    after_refund_receiver_datum_choice;
+  let [success_receiver_datum_choice_data, after_success_receiver_datum_choice] =
+    after_success_receiver_asset;
+  let [order_lp_asset_data, after_order_lp_asset] =
+    after_success_receiver_datum_choice;
+  let [order_step_data, after_order_step] =
+    after_order_lp_asset;
+  let [max_order_batcher_fee << unIData, after_max_order_batcher_fee] =
+    after_order_step;
+  let order_expiry_setting_data =
+    list_first(after_max_order_batcher_fee);
+  !
+    (chooseList(
+      tailList(after_max_order_batcher_fee),
+      # {
+        let canceller_checked =
+          assert_canceller_shape_template(constr_tag_of, constr_fields_of, order_canceller_data);
+        let refund_receiver_checked =
+          assert_order_asset_data(refund_receiver_asset_data);
+        let refund_receiver_datum_checked =
+          assert_order_choice_data(refund_receiver_datum_choice_data);
+        let success_receiver_checked =
+          assert_order_asset_data(success_receiver_asset_data);
+        let success_receiver_datum_checked =
+          assert_order_choice_data(success_receiver_datum_choice_data);
+        let lp_asset_checked =
+          validate_asset_pair(order_lp_asset_data);
+        let order_step_shape_checked =
+          assert_order_step_shape_template(
+            constr_tag_of,
+            constr_fields_of,
+            list_first_constr_tag,
+            assert_each_list_item,
+            validate_asset_pair,
+            assert_tagged_single_int_bound,
+            assert_tagged_single_int_data,
+            order_step_data
+          );
+        let expiry_setting_checked =
+          assert_expiry_setting_shape_template(
+            constr_tag_of,
+            constr_fields_of,
+            data_pair_from_list,
+            order_expiry_setting_data
+          );
+        ()
+      },
+      #error
+    ))
+}
